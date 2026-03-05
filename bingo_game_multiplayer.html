@@ -1865,11 +1865,7 @@
             updateStats();
             checkWinForViewer();
             
-            // Say "號碼係 X" once, then repeat once after 2 seconds
             speakCantonese(number, phrase);
-            setTimeout(() => {
-                speakCantonese(number, phrase);
-            }, 2000);
         }
         
         // Check win for viewer (shows claim button)
@@ -2382,9 +2378,6 @@
             // Only VIEWER hears voice - HOST is silent
             if (gameMode === 'viewer') {
                 speakCantonese(number, phrase);
-                setTimeout(() => {
-                    speakCantonese(number, phrase);
-                }, 2000);
             }
         }
 
