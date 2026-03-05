@@ -1268,6 +1268,17 @@
                 <input type="text" class="player-name-input" id="playerNameInput" placeholder="輸入你嘅名 Enter your name">
                 <button id="submitClaimBtn" style="display:none; margin-top:10px; width:100%;" onclick="submitBingoClaim()">✅ 提交 Submit</button>
                 
+                <!-- Voice toggle (Viewer only) -->
+                <div id="voiceToggleBar" style="display:none; text-align:center; margin: 15px 0 5px;">
+                    <button id="voiceToggleBtn" onclick="toggleVoice()" style="
+                        padding: 10px 24px; font-size: 1em; font-weight: bold;
+                        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+                        color: #222; border: none; border-radius: 20px; cursor: pointer;
+                        box-shadow: 0 3px 10px rgba(0,0,0,0.2);">
+                        🔊 聲音 ON
+                    </button>
+                </div>
+
                 <h3 style="text-align: center; margin: 30px 0 20px; color: #333;">所有號碼 Number Board (1-75)</h3>
                 <div class="number-board" id="numberBoard"></div>
             </div>
@@ -1675,6 +1686,9 @@
                 document.querySelectorAll('.host-only').forEach(el => {
                     el.style.display = 'none';
                 });
+
+                // Show voice toggle for viewer
+                document.getElementById('voiceToggleBar').style.display = 'block';
                 
                 // Start listening for numbers from HOST
                 if (isFirebaseConfigured) {
@@ -2092,8 +2106,8 @@
         // BROWSER VOICE CONFIGURATION
         // ==========================================
         // Using Web Speech API (built into browser, no API key needed)
-        const VOICE_ENABLED = true; // Set to false to disable voice
-        const USE_BROWSER_VOICE = true; // Using browser's built-in Cantonese voice
+        let VOICE_ENABLED = true; // toggled by voice button
+        const USE_BROWSER_VOICE = true;
 
         // Cantonese number mappings
         const cantoneseNumbers = {
@@ -2462,36 +2476,46 @@
             oscillator.stop(audioContext.currentTime + 0.1);
         }
 
-        // Speak number in Cantonese using Browser Voice (Web Speech API)
-        function speakCantonese(number, phrase) {
-            if (!VOICE_ENABLED || !('speechSynthesis' in window)) {
-                return;
-            }
+        // Dedup guard — prevent the same number from being spoken more than once
+        let _lastSpokenNumber = null;
+        let _lastSpokenTime = 0;
 
-            // Cancel any ongoing speech first
+        function speakCantonese(number, phrase) {
+            if (!VOICE_ENABLED || !('speechSynthesis' in window)) return;
+
+            // Block if this exact number was already spoken in the last 8 seconds
+            const now = Date.now();
+            if (number === _lastSpokenNumber && now - _lastSpokenTime < 8000) return;
+            _lastSpokenNumber = number;
+            _lastSpokenTime = now;
+
             speechSynthesis.cancel();
-            
+
             const text = phrase || `號碼係 ${number}`;
             const utterance = new SpeechSynthesisUtterance(text);
-            
-            // Try to find a Cantonese voice
+
             const voices = speechSynthesis.getVoices();
-            const cantoneseVoice = voices.find(voice => 
-                voice.lang.includes('zh-HK') || 
-                voice.lang.includes('yue') ||
-                voice.lang.includes('zh-TW')
+            const cantoneseVoice = voices.find(v =>
+                v.lang.includes('zh-HK') || v.lang.includes('yue') || v.lang.includes('zh-TW')
             );
-            
-            if (cantoneseVoice) {
-                utterance.voice = cantoneseVoice;
-            }
-            
+            if (cantoneseVoice) utterance.voice = cantoneseVoice;
+
             utterance.lang = 'zh-HK';
             utterance.rate = 0.9;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
-            
+
             speechSynthesis.speak(utterance);
+        }
+
+        function toggleVoice() {
+            VOICE_ENABLED = !VOICE_ENABLED;
+            if (!VOICE_ENABLED) speechSynthesis.cancel();
+            const btn = document.getElementById('voiceToggleBtn');
+            btn.textContent = VOICE_ENABLED ? '🔊 聲音 ON' : '🔇 聲音 OFF';
+            btn.style.background = VOICE_ENABLED
+                ? 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+                : 'linear-gradient(135deg, #ccc 0%, #aaa 100%)';
         }
 
         // Load voices when available
