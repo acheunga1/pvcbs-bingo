@@ -606,6 +606,13 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
             background-attachment: scroll !important;
         }
+        /* iOS Safari: hide fixed-position overlays that paint white over the body bg */
+        body.viewer-mode::before {
+            display: none !important;
+        }
+        body.viewer-mode #bgVideo {
+            display: none !important;
+        }
         body.viewer-mode .container {
             max-width: 430px;
             width: 100%;
