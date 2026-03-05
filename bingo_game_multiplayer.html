@@ -226,11 +226,11 @@
             text-shadow: 2px 2px 10px #b71c1c, 0 0 2px #fff;
         }
 
-        /* Viewer card — transparent so purple body shows through */
+        /* Viewer card — red background */
         body.viewer-mode .board-section {
-            background: rgba(255, 255, 255, 0.15);
+            background: linear-gradient(135deg, #d32f2f 0%, #ff5252 100%);
             border-radius: 18px;
-            box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+            box-shadow: 0 6px 24px rgba(211,47,47,0.18);
         }
         body.viewer-mode .bingo-card-header {
             margin-bottom: 10px;
@@ -630,7 +630,7 @@
         body.viewer-mode .controls-section {
             padding: 15px;
             border-radius: 15px;
-            background: rgba(255, 255, 255, 0.15);
+            background: transparent;
         }
         body.viewer-mode .current-number {
             padding: 20px;
@@ -657,8 +657,6 @@
         }
         body.viewer-mode .board-section {
             padding: 15px;
-            border-radius: 15px;
-            background: rgba(255, 255, 255, 0.15);
         }
         body.viewer-mode .bingo-card {
             gap: 5px;
