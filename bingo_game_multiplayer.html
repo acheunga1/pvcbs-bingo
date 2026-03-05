@@ -226,11 +226,12 @@
             text-shadow: 2px 2px 10px #b71c1c, 0 0 2px #fff;
         }
 
-        /* Viewer card — red background */
+        /* Viewer card — red background (single authoritative rule) */
         body.viewer-mode .board-section {
-            background: linear-gradient(135deg, #d32f2f 0%, #ff5252 100%);
-            border-radius: 18px;
-            box-shadow: 0 6px 24px rgba(211,47,47,0.18);
+            background: linear-gradient(135deg, #d32f2f 0%, #ff5252 100%) !important;
+            border-radius: 18px !important;
+            padding: 15px !important;
+            box-shadow: 0 6px 24px rgba(211,47,47,0.18) !important;
         }
         body.viewer-mode .bingo-card-header {
             margin-bottom: 10px;
@@ -630,7 +631,8 @@
         body.viewer-mode .controls-section {
             padding: 15px;
             border-radius: 15px;
-            background: transparent;
+            background: transparent !important;
+            box-shadow: none !important;
         }
         body.viewer-mode .current-number {
             padding: 20px;
@@ -654,9 +656,6 @@
         body.viewer-mode .stats {
             margin-top: 15px;
             padding: 12px;
-        }
-        body.viewer-mode .board-section {
-            padding: 15px;
         }
         body.viewer-mode .bingo-card {
             gap: 5px;
