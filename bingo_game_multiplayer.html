@@ -1,0 +1,2694 @@
+﻿<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>亞嘉世 Bingo Game 多人遊戲</title>
+    <!-- Trendy font for BINGO -->
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Background video */
+        #bgVideo {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+            opacity: 0.3;
+        }
+
+        /* Background image overlay (fallback if no video) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('assets/images/background.jpg');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            z-index: -1;
+        }
+
+        /* Decorative floating elements */
+        .floating-decoration {
+            position: fixed;
+            pointer-events: none;
+            opacity: 0.15;
+            z-index: 0;
+        }
+
+        .decoration-1 {
+            top: 10%;
+            left: 5%;
+            width: 150px;
+            height: 150px;
+            background: url('assets/images/decoration1.png') no-repeat center;
+            background-size: contain;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .decoration-2 {
+            top: 60%;
+            right: 8%;
+            width: 120px;
+            height: 120px;
+            background: url('assets/images/decoration2.png') no-repeat center;
+            background-size: contain;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Organizer Logo Header (Top) - visible to HOST always, viewer via JS */
+        .organizer-header {
+            text-align: center;
+            padding: 30px 40px;
+            margin-bottom: 20px;
+        }
+
+        .organizer-logo-video {
+            max-width: 500px;
+            width: 100%;
+            height: auto;
+            max-height: 150px;
+            object-fit: contain;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.2));
+        }
+
+        /* AlphaSight Gold Logo (Bottom-Left) — REMOVED */
+        .sponsor-logo-container {
+            display: none !important;
+        }
+
+        /* Music controls */
+        .music-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 25px;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .music-toggle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .music-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .music-toggle.playing {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #volumeSlider {
+            width: 80px;
+            cursor: pointer;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: titlePulse 2s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .title-logo {
+            height: 2.4em; /* doubled size */
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+            vertical-align: middle;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes logoFlash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .bingo-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 18px;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+        .bingo-card-logo {
+            height: 2.2em;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+            animation: logoFlash 1.2s infinite;
+        }
+        .bingo-card-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 8px #b71c1c, 0 0 2px #fff;
+        }
+        .bingo-card-bingo {
+            font-family: 'Luckiest Guy', 'Bangers', 'Impact', 'Arial Black', sans-serif;
+            font-size: 2.2em;
+            color: #fff;
+            margin-left: 10px;
+            letter-spacing: 4px;
+            text-shadow: 2px 2px 10px #b71c1c, 0 0 2px #fff;
+        }
+
+        /* Red background for viewer card */
+        body.viewer-mode .board-section {
+            background: linear-gradient(135deg, #d32f2f 0%, #ff5252 100%);
+            border-radius: 18px;
+            box-shadow: 0 6px 24px rgba(211,47,47,0.18);
+        }
+        body.viewer-mode .bingo-card-header {
+            margin-bottom: 10px;
+        }
+        body.viewer-mode .bingo-card-name, body.viewer-mode .bingo-card-bingo {
+            color: #fff;
+            text-shadow: 2px 2px 10px #b71c1c, 0 0 2px #fff;
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        /* HOST mode: hide Bingo card but keep number board visible */
+        body.host-mode .bingo-card,
+        body.host-mode .claim-bingo-btn,
+        body.host-mode .player-name-input,
+        body.host-mode #submitClaimBtn,
+        body.host-mode #newCardBtn {
+            display: none !important;
+        }
+
+        body.host-mode .board-section h2:first-child {
+            display: none !important;
+        }
+
+        .controls-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .current-number {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .current-number h2 {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        #currentBall {
+            font-size: 4em;
+            color: white;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: ballPop 0.5s ease-out;
+        }
+
+        @keyframes ballPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .cantonese-text {
+            font-size: 1.5em;
+            color: white;
+            margin-top: 15px;
+            font-weight: 500;
+            line-height: 1.4;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 10px;
+            animation: textFadeIn 0.5s ease-out;
+        }
+
+        @keyframes textFadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #drawBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        #autoBtn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        #resetBtn {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        #newCardBtn {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .stats {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 10px;
+        }
+
+        .stats h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .stats p {
+            font-size: 1.1em;
+            color: #555;
+            margin: 5px 0;
+        }
+
+        .board-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .bingo-card {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .bingo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .bingo-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            font-size: 1.8em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bingo-cell:hover:not(.marked):not(.free) {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+
+        .bingo-cell.marked {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            transform: scale(0.95);
+        }
+
+        .bingo-cell.marked::after {
+            content: '✓';
+            position: absolute;
+            font-size: 2em;
+            animation: checkMark 0.5s ease-out;
+        }
+
+        @keyframes checkMark {
+            0% { transform: scale(0) rotate(-45deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+
+        .bingo-cell.free {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #666;
+            font-size: 1.2em;
+            cursor: default;
+        }
+
+        .number-board {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            gap: 8px;
+        }
+
+        .number-ball {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            font-size: 1em;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .number-ball.called {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.1);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .winner-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .winner-overlay.show {
+            display: flex;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .winner-message {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 60px;
+            border-radius: 20px;
+            text-align: center;
+            animation: bounceIn 0.8s;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .winner-message h2 {
+            font-size: 4em;
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .winner-message p {
+            font-size: 2em;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            position: absolute;
+            animation: confetti-fall 3s linear infinite;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .game-area {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .number-board {
+                grid-template-columns: repeat(10, 1fr);
+            }
+            
+            .organizer-logo-video {
+                max-width: 400px;
+                max-height: 120px;
+            }
+            
+
+        }
+
+        @media (max-width: 600px) {
+            .organizer-logo-video {
+                max-width: 300px;
+                max-height: 100px;
+            }
+            
+            .music-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        /* ========================================
+           VIEWER MODE: 9:16 MOBILE PORTRAIT LAYOUT
+           ======================================== */
+        body.viewer-mode {
+            padding: 10px;
+            min-height: 100dvh;
+            justify-content: flex-start;
+        }
+        body.viewer-mode .container {
+            max-width: 430px;
+            width: 100%;
+        }
+        body.viewer-mode .organizer-header {
+            padding: 15px 10px;
+            margin-bottom: 10px;
+        }
+        body.viewer-mode .organizer-logo-video {
+            max-width: 280px;
+            max-height: 90px;
+        }
+        body.viewer-mode h1 {
+            font-size: 1.8em;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+        body.viewer-mode .title-logo {
+            height: 1em;
+        }
+        body.viewer-mode .game-area {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        body.viewer-mode .controls-section {
+            padding: 15px;
+            border-radius: 15px;
+        }
+        body.viewer-mode .current-number {
+            padding: 20px;
+            min-height: 180px;
+            margin-bottom: 15px;
+        }
+        body.viewer-mode #currentBall {
+            font-size: 3em;
+        }
+        body.viewer-mode .cantonese-text {
+            font-size: 1.1em;
+            min-height: 50px;
+        }
+        body.viewer-mode .controls {
+            gap: 10px;
+        }
+        body.viewer-mode .controls button {
+            padding: 12px 20px;
+            font-size: 1em;
+        }
+        body.viewer-mode .stats {
+            margin-top: 15px;
+            padding: 12px;
+        }
+        body.viewer-mode .board-section {
+            padding: 15px;
+            border-radius: 15px;
+        }
+        body.viewer-mode .bingo-card {
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        body.viewer-mode .bingo-header {
+            padding: 12px;
+            font-size: 1.8em;
+        }
+        body.viewer-mode .bingo-cell {
+            font-size: 2.2em;
+            border-width: 2px;
+        }
+        body.viewer-mode .number-board {
+            grid-template-columns: repeat(10, 1fr);
+            gap: 4px;
+        }
+        body.viewer-mode .number-ball {
+            font-size: 1em;
+            border-width: 1px;
+        }
+        body.viewer-mode .music-controls {
+            padding: 10px 15px;
+            gap: 8px;
+            flex-direction: column;
+        }
+        body.viewer-mode .player-info-bar {
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+        body.viewer-mode .mode-badge {
+            top: 10px;
+            right: 10px;
+            padding: 8px 18px;
+            font-size: 0.9em;
+        }
+    
+        /* ========================================
+           MULTIPLAYER MODE STYLES
+           ======================================== */
+        
+        /* Mode Selection Dialog */
+        .mode-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s;
+        }
+        
+        .mode-dialog.hidden { display: none; }
+        
+        .mode-content {
+            background: white;
+            padding: 60px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .mode-content h2 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .mode-content p {
+            font-size: 1.3em;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .mode-buttons {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .mode-btn {
+            padding: 30px 50px;
+            font-size: 1.8em;
+            font-weight: bold;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            min-width: 200px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .mode-btn.host {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .mode-btn.viewer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .mode-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        
+        .mode-btn:active {
+            transform: translateY(-2px);
+        }
+        
+        .password-input {
+            margin-top: 30px;
+            padding: 20px;
+            font-size: 1.4em;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            width: 100%;
+            display: none;
+            text-align: center;
+        }
+        
+        .password-input:focus {
+            outline: none;
+            border-color: #f5576c;
+            box-shadow: 0 0 20px rgba(245,87,108,0.3);
+        }
+        
+        /* Mode Badge */
+        .mode-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 15px 35px;
+            border-radius: 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+            display: none;
+        }
+        
+        .mode-badge.show {
+            display: block;
+            animation: slideInRight 0.5s;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .mode-badge.host {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .mode-badge.viewer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        /* Viewer-only BINGO Claim Button */
+        .claim-bingo-btn {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .claim-bingo-btn.show {
+            display: block;
+        }
+        
+        .player-name-input {
+            margin-top: 15px;
+            padding: 15px;
+            font-size: 1.2em;
+            border: 2px solid #f5576c;
+            border-radius: 10px;
+            width: 100%;
+            display: none;
+        }
+        
+        .player-name-input.show {
+            display: block;
+        }
+        
+        /* HOST Claims Queue */
+        .claims-queue {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 15px;
+            display: none;
+        }
+        
+        .claims-queue.show {
+            display: block;
+        }
+        
+        .claims-queue h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .claim-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .claim-item button {
+            padding: 10px 20px;
+            font-size: 1em;
+            margin-left: 10px;
+        }
+        
+        /* Verification Timer */
+        .verification-timer {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 60px;
+            border-radius: 30px;
+            font-size: 3em;
+            font-weight: bold;
+            z-index: 9999;
+            display: none;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
+        
+        .verification-timer.show {
+            display: block;
+            animation: bounceIn 0.5s;
+        }
+        
+        .verification-timer .timer-label {
+            font-size: 0.4em;
+            margin-bottom: 20px;
+            color: #fcb69f;
+        }
+        
+        .verification-timer .countdown {
+            font-size: 2em;
+            color: #f5576c;
+        }
+
+        /* ========================================
+           PLAYER REGISTRATION & CARD LIMIT STYLES
+           ======================================== */
+        
+        /* Player Registration Dialog (after selecting VIEWER) */
+        .player-registration {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9500;
+            animation: fadeIn 0.3s;
+        }
+        .player-registration.hidden { display: none; }
+        .player-registration .reg-content {
+            background: white;
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .player-registration .reg-content h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .player-registration .reg-content p {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 25px;
+        }
+        .player-registration .reg-input {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3em;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .player-registration .reg-input:focus {
+            border-color: #f5576c;
+            box-shadow: 0 0 15px rgba(245,87,108,0.3);
+        }
+        .player-registration .reg-btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .player-registration .reg-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .player-registration .reg-error {
+            color: #f5576c;
+            font-weight: bold;
+            margin-top: 15px;
+            min-height: 1.5em;
+        }
+        
+        /* Player Info Bar (shown to VIEWER after registration) */
+        .player-info-bar {
+            display: none;
+            background: rgba(255,255,255,0.95);
+            padding: 12px 25px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .player-info-bar.show { display: flex; }
+        .player-info-bar .player-name-display {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+        }
+        .player-info-bar .card-counter {
+            font-size: 1.1em;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .player-info-bar .card-counter.available {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #2e7d32;
+        }
+        .player-info-bar .card-counter.depleted {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            color: #c62828;
+        }
+        
+        /* HOST: Player Management Panel */
+        .player-management {
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 15px;
+            display: none;
+        }
+        .player-management.show { display: block; }
+        .player-management h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.2em;
+        }
+        .player-management .default-limit-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .player-management .default-limit-row label {
+            font-weight: bold;
+            color: #333;
+        }
+        .player-management .default-limit-row input {
+            width: 70px;
+            padding: 8px 12px;
+            font-size: 1.1em;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .player-management .default-limit-row button {
+            padding: 8px 20px;
+            font-size: 0.95em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .player-management .player-count-info {
+            font-size: 0.95em;
+            color: #555;
+            margin-bottom: 15px;
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 8px;
+        }
+        .player-list-scroll {
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.5);
+        }
+        .player-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .player-row:last-child { border-bottom: none; }
+        .player-row:hover { background: rgba(255,255,255,0.8); }
+        .player-row .p-name {
+            font-weight: bold;
+            color: #333;
+            min-width: 100px;
+        }
+        .player-row .p-usage {
+            font-size: 0.9em;
+            color: #555;
+            min-width: 80px;
+        }
+        .player-row .p-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .player-row .p-controls input {
+            width: 55px;
+            padding: 5px;
+            font-size: 1em;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .player-row .p-controls button {
+            padding: 5px 12px;
+            font-size: 0.85em;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: none;
+        }
+        .player-row .p-controls button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mode Selection Dialog -->
+    <div class="mode-dialog" id="modeDialog">
+        <div class="mode-content">
+            <h2> Select Mode</h2>
+            <p>Are you the HOST or a VIEWER?<br>你係主持人定觀眾？</p>
+            <div class="mode-buttons">
+                <button class="mode-btn host" onclick="selectMode('host')">
+                     HOST<br><small>主持人</small>
+                </button>
+                <button class="mode-btn viewer" onclick="selectMode('viewer')">
+                     VIEWER<br><small>觀眾</small>
+                </button>
+            </div>
+            <input type="password" class="password-input" id="hostPassword" placeholder="Enter HOST password 輸入密碼">
+            <button class="mode-btn host" id="hostConfirm" style="display:none; margin-top:20px; width:100%;" onclick="confirmHost()">
+                 Confirm 確認
+            </button>
+        </div>
+    </div>
+
+    <!-- Player Registration Dialog (VIEWER) -->
+    <div class="player-registration hidden" id="playerRegistration">
+        <div class="reg-content">
+            <h2>📝 Register 登記</h2>
+            <p>Enter your name to join the game<br>輸入你嘅名加入遊戲</p>
+            <input type="text" class="reg-input" id="regNameInput" placeholder="Your Name 你嘅名" maxlength="20">
+            <button class="reg-btn" onclick="registerPlayer()">🎮 Join Game 加入遊戲</button>
+            <div class="reg-error" id="regError"></div>
+        </div>
+    </div>
+
+    <!-- Mode Badge -->
+    <div class="mode-badge" id="modeBadge"></div>
+
+    <!-- Verification Timer Overlay -->
+    <div class="verification-timer" id="verificationTimer">
+        <div class="timer-label"> Verification Time 驗證時間</div>
+        <div class="countdown" id="countdownDisplay">60</div>
+    </div>
+    <!-- Background Video (optional - only shows if file exists) -->
+    <video id="bgVideo" autoplay loop muted playsinline>
+        <source src="assets/images/background.mp4" type="video/mp4">
+    </video>
+
+    <!-- Floating decorations -->
+    <div class="floating-decoration decoration-1"></div>
+    <div class="floating-decoration decoration-2"></div>
+
+    <!-- AlphaSight Gold Logo (Bottom-Left) -->
+    <div class="sponsor-logo-container">
+        <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" class="sponsor-logo" id="alphasightLogo">
+    </div>
+
+    <div class="container">
+        <!-- Organizer Logo Header (Top) -->
+        <div class="organizer-header">
+            <img src="assets/logos/Pvcbs.gif" alt="PVCBS Logo" class="organizer-logo-video" id="organizerLogo">
+            
+            <div class="music-controls">
+                <button class="music-toggle" id="musicToggle">
+                    <span id="musicIcon">🎵</span>
+                    <span id="musicText">播放音樂</span>
+                </button>
+                <div class="volume-control">
+                    <span>🔊</span>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Info Bar (VIEWER) -->
+        <div class="player-info-bar" id="playerInfoBar">
+            <div class="player-name-display" id="playerNameBar">👤 --</div>
+            <div class="card-counter available" id="cardCounter">🎴 Cards: 0 / 0</div>
+        </div>
+
+        <h1><img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" class="title-logo" style="height:4.4em;width:auto;"> 亞嘉世 Bingo Game <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" class="title-logo" style="height:4.4em;width:auto;"></h1>
+        
+        <div class="game-area">
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="current-number">
+                    <h2>當前號碼 Current Number</h2>
+                    <div id="currentBall">--</div>
+                    <div class="cantonese-text" id="cantoneseText">開始遊戲</div>
+                </div>
+
+                <div class="controls">
+                    <button id="drawBtn" class="host-only">🎱 抽號碼 Draw Number</button>
+                    <button id="autoBtn" class="host-only">⚡ 自動抽號 Auto Draw</button>
+                    <button id="resetBtn" class="host-only">🔄 重新開始 Reset Game</button>
+                    <button id="newCardBtn">🎴 新卡片 New Card</button>
+                </div>
+
+                <div class="stats">
+                    <h3>📊 遊戲統計 Statistics</h3>
+                    <p>已抽號碼 Drawn: <strong id="drawnCount">0</strong> / 75</p>
+                    <p>剩餘號碼 Remaining: <strong id="remainingCount">75</strong></p>
+                    <p id="voiceStatus" style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 0.9em;">
+                        🔊 語音狀態 Voice: <strong id="voiceStatusText">未配置 Not Configured</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Board Section -->
+            <div class="board-section">
+                <div id="bingoCardHeader"></div>
+                <div class="bingo-card" id="bingoCard"></div>
+                
+                <!-- BINGO Claim Button (Viewer only) -->
+                <button class="claim-bingo-btn" id="claimBingoBtn" onclick="showPlayerNameInput()">🎉 BINGO! 我贏咗！I Won!</button>
+                <input type="text" class="player-name-input" id="playerNameInput" placeholder="輸入你嘅名 Enter your name">
+                <button id="submitClaimBtn" style="display:none; margin-top:10px; width:100%;" onclick="submitBingoClaim()">✅ 提交 Submit</button>
+                
+                <h3 style="text-align: center; margin: 30px 0 20px; color: #333;">所有號碼 Number Board (1-75)</h3>
+                <div class="number-board" id="numberBoard"></div>
+            </div>
+            
+            <!-- HOST Claims Queue -->
+            <div class="claims-queue" id="claimsQueue">
+                <h3>📋 BINGO 申請 Claims Queue</h3>
+                <div id="claimsList"><p style="color:#999;">No claims yet 暫時冇申請</p></div>
+            </div>
+            
+            <!-- HOST Player Management -->
+            <div class="player-management" id="playerManagement">
+                <h3>👥 Player Management 玩家管理</h3>
+                <div class="default-limit-row">
+                    <label>Default Max Cards 預設張數:</label>
+                    <input type="number" id="defaultMaxCards" value="3" min="1" max="50">
+                    <button onclick="applyDefaultToAll()">Apply to All 套用全部</button>
+                </div>
+                <div class="player-count-info" id="playerCountInfo">0 players registered 已登記</div>
+                <div class="player-list-scroll" id="playerListScroll">
+                    <p style="color:#999; padding:15px; text-align:center;">No players yet 暫時冇玩家</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="winner-overlay" id="winnerOverlay">
+        <div class="winner-message">
+            <h2>🎉 BINGO! 🎉</h2>
+            <p id="winMessage">恭喜你贏咗！</p>
+            <button id="closeWinBtn" style="font-size: 1.2em;">繼續玩 Continue</button>
+        </div>
+    </div>
+
+    <!-- Background Music -->
+    <audio id="bgMusic" loop>
+        <source src="assets/music/bingo-background.mp3" type="audio/mpeg">
+        <source src="assets/music/bingo-background.ogg" type="audio/ogg">
+    </audio>
+
+    <script>
+        
+        // ==========================================
+        // FIREBASE CONFIGURATION & INITIALIZATION
+        // ==========================================
+        
+        // FIREBASE CONFIG (已配置 ✓)
+        const firebaseConfig = {
+          apiKey: "AIzaSyBHIbbJvLvhdK2LHTAvgCCE4DqL1jKxnt4",
+          authDomain: "bingo-game-alphasighthk.firebaseapp.com",
+          databaseURL: "https://bingo-game-alphasighthk-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "bingo-game-alphasighthk",
+          storageBucket: "bingo-game-alphasighthk.firebasestorage.app",
+          messagingSenderId: "408921101685",
+          appId: "1:408921101685:web:b337a2141e64452e8d2f3c",
+          measurementId: "G-WCH4FJHF86"
+        };
+        
+        // Initialize Firebase
+        let database;
+        let isFirebaseConfigured = false;
+        
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                isFirebaseConfigured = true;
+                console.log("✅ Firebase SDK initialized");
+                
+                // TEST Firebase connection by writing a test value
+                database.ref('connectionTest').set({ time: Date.now(), status: 'connected' })
+                    .then(() => {
+                        console.log("✅ Firebase WRITE TEST: SUCCESS - Database is connected!");
+                    })
+                    .catch((err) => {
+                        console.error("❌ Firebase WRITE TEST FAILED:", err);
+                        alert("Firebase連接失敗！請檢查Firebase Rules是否設為 read/write = true");
+                        isFirebaseConfigured = false;
+                    });
+                    
+                // Monitor connection state
+                database.ref('.info/connected').on('value', (snap) => {
+                    if (snap.val() === true) {
+                        console.log("🟢 Firebase: CONNECTED");
+                    } else {
+                        console.log("🔴 Firebase: DISCONNECTED");
+                    }
+                });
+            } else {
+                console.warn("⚠ Firebase not configured.");
+            }
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            alert("Firebase configuration error: " + error.message);
+        }
+        
+        // ==========================================
+        // GAME MODE SYSTEM
+        // ==========================================
+        
+        const HOST_PASSWORD = "bingo2026"; // Change this for security!
+        let gameMode = null; // 'host' or 'viewer'
+        let currentPlayerId = null;
+        let currentPlayerName = null;
+        let playerCardsUsed = 0;
+        let playerMaxCards = 0;
+        const DEFAULT_MAX_CARDS = 3; // Default card limit per player
+        
+        // ==========================================
+        // PLAYER REGISTRATION SYSTEM
+        // ==========================================
+        
+        function showPlayerRegistration() {
+            document.getElementById('playerRegistration').classList.remove('hidden');
+            document.getElementById('regNameInput').focus();
+        }
+        
+        // Allow Enter key to submit registration
+        document.getElementById('regNameInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') registerPlayer();
+        });
+        
+        function registerPlayer() {
+            const name = document.getElementById('regNameInput').value.trim();
+            const errorEl = document.getElementById('regError');
+            
+            if (!name) {
+                errorEl.textContent = '⚠ Please enter your name! 請輸入名！';
+                return;
+            }
+            if (name.length < 1 || name.length > 20) {
+                errorEl.textContent = '⚠ Name must be 1-20 characters! 名要1-20個字！';
+                return;
+            }
+            
+            if (!isFirebaseConfigured) {
+                errorEl.textContent = '⚠ Firebase not configured!';
+                return;
+            }
+            
+            errorEl.textContent = '⏳ Registering...';
+            
+            // Create a unique player ID based on name + random suffix
+            currentPlayerId = name.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_') + '_' + Math.random().toString(36).substr(2, 6);
+            currentPlayerName = name;
+            
+            // Get the current default max from HOST setting (or use built-in default)
+            database.ref('gameSettings/defaultMaxCards').once('value').then(snap => {
+                const hostDefault = snap.val();
+                const maxCards = hostDefault || DEFAULT_MAX_CARDS;
+                
+                // Register in Firebase
+                return database.ref(`playerRegistry/${currentPlayerId}`).set({
+                    name: name,
+                    maxCards: maxCards,
+                    cardsUsed: 0,
+                    joinedAt: Date.now(),
+                    active: true
+                });
+            }).then(() => {
+                console.log(`✅ Player registered: ${name} (${currentPlayerId})`);
+                
+                // Hide registration dialog
+                document.getElementById('playerRegistration').classList.add('hidden');
+                
+                // Start listening for own player data
+                listenForPlayerData();
+                
+                // Now initialize the game for viewer
+                initGame();
+                requestNewCard(); // Request first card
+                
+                // Load previously called numbers
+                if (isFirebaseConfigured) {
+                    loadCalledNumbers();
+                }
+            }).catch(err => {
+                console.error('Registration failed:', err);
+                errorEl.textContent = '❌ Registration failed! Try again.';
+            });
+        }
+        
+        // Listen for changes to this player's data (HOST may adjust limits)
+        function listenForPlayerData() {
+            if (!currentPlayerId || !isFirebaseConfigured) return;
+            
+            database.ref(`playerRegistry/${currentPlayerId}`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    playerCardsUsed = data.cardsUsed || 0;
+                    playerMaxCards = data.maxCards || DEFAULT_MAX_CARDS;
+                    updateCardCounterUI();
+                }
+            });
+        }
+        
+        // Update the card counter display for VIEWER
+        function updateCardCounterUI() {
+            const bar = document.getElementById('playerInfoBar');
+            const nameDisplay = document.getElementById('playerNameBar');
+            const counter = document.getElementById('cardCounter');
+            
+            bar.classList.add('show');
+            nameDisplay.textContent = `👤 ${currentPlayerName}`;
+            
+            const remaining = playerMaxCards - playerCardsUsed;
+            counter.textContent = `🎴 Cards: ${playerCardsUsed} / ${playerMaxCards}`;
+            
+            if (remaining > 0) {
+                counter.classList.remove('depleted');
+                counter.classList.add('available');
+            } else {
+                counter.classList.remove('available');
+                counter.classList.add('depleted');
+            }
+            
+            // Enable/disable New Card button
+            const newCardBtn = document.getElementById('newCardBtn');
+            if (remaining <= 0) {
+                newCardBtn.disabled = true;
+                newCardBtn.textContent = '🚫 No Cards Left 冇卡喇';
+            } else {
+                newCardBtn.disabled = false;
+                newCardBtn.textContent = `🎴 新卡片 New Card (${remaining} left)`;
+            }
+        }
+        
+        // Request a new card (checks limit)
+        function requestNewCard() {
+            if (!currentPlayerId || !isFirebaseConfigured) {
+                generateBingoCard();
+                return;
+            }
+            
+            // Check limit from Firebase (atomic read)
+            database.ref(`playerRegistry/${currentPlayerId}`).once('value').then(snap => {
+                const data = snap.val();
+                if (!data) {
+                    alert('Player not found! 搵唔到玩家！');
+                    return;
+                }
+                
+                const used = data.cardsUsed || 0;
+                const max = data.maxCards || DEFAULT_MAX_CARDS;
+                
+                if (used >= max) {
+                    alert(`⚠ You've used all your cards! (${used}/${max})\n你已經用晒所有卡！`);
+                    return;
+                }
+                
+                // Increment cards used
+                return database.ref(`playerRegistry/${currentPlayerId}/cardsUsed`).set(used + 1).then(() => {
+                    generateBingoCard();
+                    console.log(`🎴 Card ${used + 1}/${max} generated for ${currentPlayerName}`);
+                });
+            }).catch(err => {
+                console.error('Card request failed:', err);
+                alert('Failed to request card. Try again.');
+            });
+        }
+        
+        // ==========================================
+        // HOST: PLAYER MANAGEMENT FUNCTIONS
+        // ==========================================
+        
+        function initHostPlayerManagement() {
+            if (gameMode !== 'host' || !isFirebaseConfigured) return;
+            
+            document.getElementById('playerManagement').classList.add('show');
+            
+            // Set the default max cards input from Firebase (if previously set)
+            database.ref('gameSettings/defaultMaxCards').once('value').then(snap => {
+                const val = snap.val();
+                if (val) document.getElementById('defaultMaxCards').value = val;
+            });
+            
+            // Save default when changed
+            document.getElementById('defaultMaxCards').addEventListener('change', function() {
+                const val = parseInt(this.value) || DEFAULT_MAX_CARDS;
+                database.ref('gameSettings/defaultMaxCards').set(val);
+                console.log(`✅ Default max cards updated to ${val}`);
+            });
+            
+            // Listen for player registry changes
+            database.ref('playerRegistry').on('value', (snapshot) => {
+                const players = snapshot.val();
+                renderPlayerList(players);
+            });
+        }
+        
+        function renderPlayerList(players) {
+            const listEl = document.getElementById('playerListScroll');
+            const countEl = document.getElementById('playerCountInfo');
+            
+            if (!players) {
+                listEl.innerHTML = '<p style="color:#999; padding:15px; text-align:center;">No players yet 暫時冇玩家</p>';
+                countEl.textContent = '0 players registered 已登記';
+                return;
+            }
+            
+            const playerEntries = Object.entries(players);
+            countEl.textContent = `${playerEntries.length} players registered 已登記`;
+            
+            let html = '';
+            playerEntries.forEach(([pid, pdata]) => {
+                const used = pdata.cardsUsed || 0;
+                const max = pdata.maxCards || DEFAULT_MAX_CARDS;
+                const usageColor = used >= max ? '#c62828' : '#2e7d32';
+                
+                html += `
+                <div class="player-row">
+                    <span class="p-name">${pdata.name}</span>
+                    <span class="p-usage" style="color:${usageColor}">🎴 ${used} / ${max}</span>
+                    <div class="p-controls">
+                        <input type="number" id="limit_${pid}" value="${max}" min="0" max="50">
+                        <button onclick="updatePlayerLimit('${pid}')">Set</button>
+                        <button onclick="resetPlayerCards('${pid}')" style="background:#f5576c;">↺</button>
+                    </div>
+                </div>`;
+            });
+            
+            listEl.innerHTML = html;
+        }
+        
+        function updatePlayerLimit(playerId) {
+            const input = document.getElementById(`limit_${playerId}`);
+            const newLimit = parseInt(input.value);
+            if (isNaN(newLimit) || newLimit < 0) {
+                alert('Invalid number!');
+                return;
+            }
+            database.ref(`playerRegistry/${playerId}/maxCards`).set(newLimit)
+                .then(() => console.log(`✅ Updated ${playerId} max cards to ${newLimit}`))
+                .catch(err => console.error('Update failed:', err));
+        }
+        
+        function resetPlayerCards(playerId) {
+            database.ref(`playerRegistry/${playerId}/cardsUsed`).set(0)
+                .then(() => console.log(`✅ Reset card count for ${playerId}`))
+                .catch(err => console.error('Reset failed:', err));
+        }
+        
+        function applyDefaultToAll() {
+            const defaultMax = parseInt(document.getElementById('defaultMaxCards').value) || DEFAULT_MAX_CARDS;
+            
+            if (!confirm(`Set ALL players to max ${defaultMax} cards?\n將所有玩家設為最多 ${defaultMax} 張卡？`)) return;
+            
+            // Save to settings
+            database.ref('gameSettings/defaultMaxCards').set(defaultMax);
+            
+            // Apply to all existing players
+            database.ref('playerRegistry').once('value').then(snap => {
+                const players = snap.val();
+                if (!players) return;
+                
+                const updates = {};
+                Object.keys(players).forEach(pid => {
+                    updates[`playerRegistry/${pid}/maxCards`] = defaultMax;
+                });
+                
+                return database.ref().update(updates);
+            }).then(() => {
+                console.log(`✅ Applied default ${defaultMax} to all players`);
+            }).catch(err => {
+                console.error('Apply default failed:', err);
+            });
+        }
+        
+        function selectMode(mode) {
+            if (mode === 'host') {
+                document.getElementById('hostPassword').style.display = 'block';
+                document.getElementById('hostConfirm').style.display = 'block';
+            } else if (mode === 'viewer') {
+                gameMode = 'viewer';
+                initializeGameMode();
+            }
+        }
+        
+        function confirmHost() {
+            const password = document.getElementById('hostPassword').value;
+            if (password === HOST_PASSWORD) {
+                gameMode = 'host';
+                initializeGameMode();
+            } else {
+                alert(" Incorrect password! 密碼錯誤！");
+                document.getElementById('hostPassword').value = '';
+            }
+        }
+        
+        function initializeGameMode() {
+            // Hide mode dialog
+            document.getElementById('modeDialog').classList.add('hidden');
+            
+            // Show and configure mode badge
+            const badge = document.getElementById('modeBadge');
+            badge.classList.add('show');
+            badge.classList.add(gameMode);
+            badge.textContent = gameMode === 'host' ? ' HOST MODE' : ' VIEWER MODE';
+            
+            if (gameMode === 'viewer') {
+                // Add viewer-mode class for 9:16 mobile layout
+                document.body.classList.add('viewer-mode');
+                
+                // Hide HOST-only controls
+                document.querySelectorAll('.host-only').forEach(el => {
+                    el.style.display = 'none';
+                });
+                
+                // Start listening for numbers from HOST
+                if (isFirebaseConfigured) {
+                    listenForNumbers();
+                    listenForVerification();
+                    console.log("Firebase connected - listening for numbers...");
+                } else {
+                    alert("Firebase未配置！睇唔到HOST嘅號碼。");
+                }
+                
+                // Show player registration dialog (game inits after registration)
+                showPlayerRegistration();
+                
+                console.log(" VIEWER mode activated - awaiting registration");
+            } else {
+                // HOST mode
+                document.body.classList.add('host-mode');
+                document.getElementById('claimsQueue').classList.add('show');
+                
+                if (isFirebaseConfigured) {
+                    listenForClaims();
+                    // Clear Firebase on HOST startup (fresh game)
+                    database.ref('gameState').remove();
+                    database.ref('bingoClaims').remove();
+                    database.ref('verification').remove();
+                    // Clear player registry for fresh game
+                    database.ref('playerRegistry').remove();
+                    console.log("🗑️ Cleared Firebase for fresh game");
+                    
+                    // Initialize HOST player management
+                    initHostPlayerManagement();
+                }
+                
+                // Initialize basic game state for HOST
+                availableNumbers = Array.from({length: 75}, (_, i) => i + 1);
+                calledNumbers = [];
+                updateStats();
+                generateNumberBoard(); // HOST needs to see 1-75 grid to track called numbers
+                
+                console.log("✅ HOST mode activated - no Bingo card generated");
+            }
+            
+            // VIEWER initialization now happens in registerPlayer()
+            // after successful registration
+        }
+        
+        // Load called numbers from Firebase (for refresh recovery)
+        function loadCalledNumbers() {
+            console.log("📥 Loading called numbers from Firebase...");
+            database.ref('gameState/calledNumbers').once('value')
+                .then((snapshot) => {
+                    const numbers = snapshot.val();
+                    if (numbers && Array.isArray(numbers)) {
+                        numbers.forEach(num => {
+                            if (!calledNumbers.includes(num)) {
+                                calledNumbers.push(num);
+                                const ball = document.getElementById(`ball-${num}`);
+                                if (ball) ball.classList.add('called');
+                            }
+                        });
+                        availableNumbers = availableNumbers.filter(n => !numbers.includes(n));
+                        updateStats();
+                        console.log(`✅ Loaded ${numbers.length} previously called numbers: [${numbers.join(', ')}]`);
+                    } else {
+                        console.log("📥 No previous numbers found (fresh game)");
+                    }
+                })
+                .catch(err => {
+                    console.error("❌ Failed to load called numbers:", err);
+                });
+        }
+        
+        // ==========================================
+        // REAL-TIME SYNC FUNCTIONS
+        // ==========================================
+        
+        // HOST broadcasts number to all viewers
+        function broadcastNumber(number, phrase) {
+            if (gameMode === 'host' && isFirebaseConfigured) {
+                console.log(`📤 Broadcasting number ${number} to Firebase...`);
+                
+                // Update current number
+                database.ref('gameState/currentNumber').set({
+                    number: number,
+                    phrase: phrase,
+                    cantonese: cantoneseNumbers[number],
+                    timestamp: Date.now()
+                })
+                .then(() => {
+                    console.log(`✅ Broadcasted number ${number} to Firebase`);
+                })
+                .catch(err => {
+                    console.error(`❌ FAILED to broadcast number ${number}:`, err);
+                    alert("Firebase寫入失敗！Check console for details.");
+                });
+                
+                // Store in called numbers array (for refresh recovery)
+                database.ref('gameState/calledNumbers').set([...calledNumbers])
+                    .then(() => console.log(`✅ Saved calledNumbers array (${calledNumbers.length} numbers)`))
+                    .catch(err => console.error("❌ Failed to save calledNumbers:", err));
+            } else {
+                console.warn(`⚠ Cannot broadcast: gameMode=${gameMode}, firebase=${isFirebaseConfigured}`);
+            }
+        }
+        
+        // VIEWER listens for numbers from HOST
+        function listenForNumbers() {
+            console.log("👂 Starting listener on gameState/currentNumber...");
+            
+            database.ref('gameState/currentNumber').on('value', (snapshot) => {
+                const data = snapshot.val();
+                console.log("👂 Firebase listener fired:", JSON.stringify(data));
+                
+                if (data && data.number) {
+                    console.log(`📩 Received number from HOST: ${data.number}`);
+                    displaySyncedNumber(data.number, data.phrase || `Number ${data.number}`);
+                } else {
+                    console.log("👂 Received null/empty data (game reset or initial load)");
+                }
+            }, (error) => {
+                console.error("❌ Firebase listener error:", error);
+            });
+            
+            // Also listen for the full calledNumbers array (for sync)
+            database.ref('gameState/calledNumbers').on('value', (snapshot) => {
+                const numbers = snapshot.val();
+                if (numbers && Array.isArray(numbers)) {
+                    // Sync any numbers we might have missed
+                    let newNumbers = 0;
+                    numbers.forEach(num => {
+                        if (!calledNumbers.includes(num)) {
+                            calledNumbers.push(num);
+                            const ball = document.getElementById(`ball-${num}`);
+                            if (ball) ball.classList.add('called');
+                            newNumbers++;
+                        }
+                    });
+                    if (newNumbers > 0) {
+                        availableNumbers = availableNumbers.filter(n => !numbers.includes(n));
+                        updateStats();
+                        console.log(`🔄 Synced ${newNumbers} missed numbers. Total: ${calledNumbers.length}`);
+                    }
+                } else if (numbers === null) {
+                    // HOST reset the game - clear everything for viewer
+                    console.log("🔄 Game reset detected! Clearing viewer state...");
+                    calledNumbers = [];
+                    availableNumbers = Array.from({length: 75}, (_, i) => i + 1);
+                    // Clear number board highlights
+                    document.querySelectorAll('.number-ball.called').forEach(ball => {
+                        ball.classList.remove('called');
+                    });
+                    // Clear bingo card markings
+                    document.querySelectorAll('.bingo-cell.marked').forEach(cell => {
+                        cell.classList.remove('marked');
+                    });
+                    updateStats();
+                    document.getElementById('currentBall').textContent = '--';
+                    document.getElementById('cantoneseText').textContent = '等緊主持人開始 Waiting for HOST...';
+                }
+            });
+        }
+        
+        // Display synced number (for viewers)
+        function displaySyncedNumber(number, phrase) {
+            // Skip if already called (avoid duplicates)
+            if (calledNumbers.includes(number)) {
+                console.log(`Number ${number} already called, skipping...`);
+                return;
+            }
+            
+            // Update display
+            const ballElement = document.getElementById('currentBall');
+            ballElement.style.animation = 'none';
+            setTimeout(() => {
+                ballElement.style.animation = 'ballPop 0.5s ease-out';
+                ballElement.textContent = number;
+            }, 10);
+            
+            document.getElementById('cantoneseText').textContent = phrase;
+            
+            // Mark on number board
+            const ball = document.getElementById(`ball-${number}`);
+            if (ball && !ball.classList.contains('called')) {
+                ball.classList.add('called');
+                calledNumbers.push(number);
+            }
+            
+            updateStats();
+            checkWinForViewer();
+            
+            // Say "號碼係 X" once, then repeat once after 2 seconds
+            speakCantonese(number, phrase);
+            setTimeout(() => {
+                speakCantonese(number, phrase);
+            }, 2000);
+        }
+        
+        // Check win for viewer (shows claim button)
+        function checkWinForViewer() {
+            const cells = Array.from(document.querySelectorAll('.bingo-cell'));
+            const marked = cells.map(cell => cell.classList.contains('marked'));
+            
+            // Check all win conditions
+            let hasWin = false;
+            
+            // Rows
+            for (let i = 0; i < 5; i++) {
+                const rowStart = (i + 1) * 5;
+                if (marked.slice(rowStart, rowStart + 5).every(m => m)) {
+                    hasWin = true;
+                    break;
+                }
+            }
+            
+            // Columns
+            if (!hasWin) {
+                for (let i = 0; i < 5; i++) {
+                    const col = [5 + i, 10 + i, 15 + i, 20 + i, 25 + i];
+                    if (col.every(idx => marked[idx])) {
+                        hasWin = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Diagonals
+            if (!hasWin) {
+                if ([6, 12, 18, 24, 30].every(idx => marked[idx]) ||
+                    [10, 12, 14, 16, 20].every(idx => marked[idx])) {
+                    hasWin = true;
+                }
+            }
+            
+            if (hasWin) {
+                document.getElementById('claimBingoBtn').classList.add('show');
+            }
+        }
+        
+        // ==========================================
+        // WINNER CLAIM SYSTEM
+        // ==========================================
+        
+        function showPlayerNameInput() {
+            document.getElementById('playerNameInput').classList.add('show');
+            document.getElementById('submitClaimBtn').style.display = 'block';
+        }
+        
+        function submitBingoClaim() {
+            const playerName = document.getElementById('playerNameInput').value.trim();
+            
+            if (!playerName) {
+                alert("請輸入你嘅名！Please enter your name!");
+                return;
+            }
+            
+            if (!isFirebaseConfigured) {
+                alert("Firebase not configured. Cannot submit claim.");
+                return;
+            }
+            
+            const claimId = Date.now();
+            database.ref(`bingoClaims/${claimId}`).set({
+                playerName: playerName,
+                timestamp: claimId,
+                verified: false
+            }).then(() => {
+                alert(" 已提交申請！Claim submitted! 請等主持人驗證 Please wait for verification.");
+                document.getElementById('claimBingoBtn').style.display = 'none';
+                document.getElementById('playerNameInput').style.display = 'none';
+                document.getElementById('submitClaimBtn').style.display = 'none';
+            }).catch(error => {
+                console.error("Error submitting claim:", error);
+                alert("提交失敗 Submission failed. Please try again.");
+            });
+        }
+        
+        // HOST listens for claims
+        function listenForClaims() {
+            database.ref('bingoClaims').on('value', (snapshot) => {
+                const claims = snapshot.val();
+                const claimsList = document.getElementById('claimsList');
+                claimsList.innerHTML = '';
+                
+                if (claims) {
+                    Object.keys(claims).forEach(claimId => {
+                        const claim = claims[claimId];
+                        if (!claim.verified) {
+                            const claimDiv = document.createElement('div');
+                            claimDiv.className = 'claim-item';
+                            claimDiv.innerHTML = `
+                                <div>
+                                    <strong>${claim.playerName}</strong><br>
+                                    <small>${new Date(claim.timestamp).toLocaleTimeString()}</small>
+                                </div>
+                                <div>
+                                    <button onclick="startVerification('${claimId}', '${claim.playerName}')" 
+                                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                         Verify
+                                    </button>
+                                    <button onclick="rejectClaim('${claimId}')" 
+                                            style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                                         Reject
+                                    </button>
+                                </div>
+                            `;
+                            claimsList.appendChild(claimDiv);
+                        }
+                    });
+                } else {
+                    claimsList.innerHTML = '<p style="color:#999;">No claims yet 暫時冇申請</p>';
+                }
+            });
+            
+            // HOST also listens for verification to show accept button
+            database.ref('verification').on('value', (snapshot) => {
+                const verification = snapshot.val();
+                if (verification && verification.active) {
+                    const claimsList = document.getElementById('claimsList');
+                    const acceptBtn = document.getElementById('hostAcceptBtn');
+                    if (!acceptBtn) {
+                        const btn = document.createElement('button');
+                        btn.id = 'hostAcceptBtn';
+                        btn.textContent = '✓ Accept Winner 接受';
+                        btn.style.cssText = 'width:100%; padding:20px; font-size:1.5em; background:linear-gradient(135deg, #30cfd0 0%, #330867 100%); color:white; border:none; border-radius:15px; margin-top:20px; cursor:pointer; animation: pulse 1s infinite;';
+                        btn.onclick = () => acceptClaim(verification.claimId, verification.playerName);
+                        claimsList.parentElement.appendChild(btn);
+                    }
+                } else {
+                    const acceptBtn = document.getElementById('hostAcceptBtn');
+                    if (acceptBtn) acceptBtn.remove();
+                }
+            });
+        }
+        
+        // ==========================================
+        // VERIFICATION TIMER SYSTEM
+        // ==========================================
+        
+        let verificationInterval = null;
+        
+        function startVerification(claimId, playerName) {
+            if (!isFirebaseConfigured) return;
+            
+            // Start 60-second timer
+            database.ref('verification').set({
+                active: true,
+                timeLeft: 60,
+                claimId: claimId,
+                playerName: playerName,
+                startTime: Date.now()
+            });
+        }
+        
+        function listenForVerification() {
+            database.ref('verification').on('value', (snapshot) => {
+                const verification = snapshot.val();
+                const timerDiv = document.getElementById('verificationTimer');
+                const countdownDisplay = document.getElementById('countdownDisplay');
+                
+                if (verification && verification.active) {
+                    timerDiv.classList.add('show');
+                    
+                    // Calculate time left
+                    const elapsed = Math.floor((Date.now() - verification.startTime) / 1000);
+                    const timeLeft = Math.max(0, 60 - elapsed);
+                    countdownDisplay.textContent = timeLeft;
+                    countdownDisplay.style.color = timeLeft <= 10 ? '#f5576c' : '#fcb69f';
+                    
+                    // Update every second
+                    if (verificationInterval) clearInterval(verificationInterval);
+                    verificationInterval = setInterval(() => {
+                        const newElapsed = Math.floor((Date.now() - verification.startTime) / 1000);
+                        const newTimeLeft = Math.max(0, 60 - newElapsed);
+                        countdownDisplay.textContent = newTimeLeft;
+                        countdownDisplay.style.color = newTimeLeft <= 10 ? '#f5576c' : '#fcb69f';
+                        
+                        if (newTimeLeft <= 0) {
+                            clearInterval(verificationInterval);
+                        }
+                    }, 1000);
+                } else {
+                    timerDiv.classList.remove('show');
+                    if (verificationInterval) {
+                        clearInterval(verificationInterval);
+                        verificationInterval = null;
+                    }
+                }
+            });
+        }
+        
+        function acceptClaim(claimId, playerName) {
+            if (!isFirebaseConfigured) return;
+            
+            // Mark as verified
+            database.ref(`bingoClaims/${claimId}`).update({ verified: true });
+            
+            // Stop verification timer
+            database.ref('verification').set({ active: false });
+            
+            // Show winner to everyone
+            showWinner(` Winner: ${playerName}!`);
+        }
+        
+        function rejectClaim(claimId) {
+            if (!isFirebaseConfigured) return;
+            
+            // Remove claim
+            database.ref(`bingoClaims/${claimId}`).remove();
+            
+            // Stop verification if this was being verified
+            database.ref('verification').once('value', (snapshot) => {
+                const verification = snapshot.val();
+                if (verification && verification.claimId === claimId) {
+                    database.ref('verification').set({ active: false });
+                }
+            });
+        }
+        // ==========================================
+        // BROWSER VOICE CONFIGURATION
+        // ==========================================
+        // Using Web Speech API (built into browser, no API key needed)
+        const VOICE_ENABLED = true; // Set to false to disable voice
+        const USE_BROWSER_VOICE = true; // Using browser's built-in Cantonese voice
+
+        // Cantonese number mappings
+        const cantoneseNumbers = {
+            1: '一', 2: '二', 3: '三', 4: '四', 5: '五',
+            6: '六', 7: '七', 8: '八', 9: '九', 10: '十',
+            11: '十一', 12: '十二', 13: '十三', 14: '十四', 15: '十五',
+            16: '十六', 17: '十七', 18: '十八', 19: '十九', 20: '二十',
+            21: '二十一', 22: '二十二', 23: '二十三', 24: '二十四', 25: '二十五',
+            26: '二十六', 27: '二十七', 28: '二十八', 29: '二十九', 30: '三十',
+            31: '三十一', 32: '三十二', 33: '三十三', 34: '三十四', 35: '三十五',
+            36: '三十六', 37: '三十七', 38: '三十八', 39: '三十九', 40: '四十',
+            41: '四十一', 42: '四十二', 43: '四十三', 44: '四十四', 45: '四十五',
+            46: '四十六', 47: '四十七', 48: '四十八', 49: '四十九', 50: '五十',
+            51: '五十一', 52: '五十二', 53: '五十三', 54: '五十四', 55: '五十五',
+            56: '五十六', 57: '五十七', 58: '五十八', 59: '五十九', 60: '六十',
+            61: '六十一', 62: '六十二', 63: '六十三', 64: '六十四', 65: '六十五',
+            66: '六十六', 67: '六十七', 68: '六十八', 69: '六十九', 70: '七十',
+            71: '七十一', 72: '七十二', 73: '七十三', 74: '七十四', 75: '七十五'
+        };
+
+        // Fun Cantonese phrases for Bingo calling
+        const bingoCallPhrases = {
+            // Standard number announcements with personality
+            standard: [
+                '下一個號碼係 {num}！{cantonese}！',
+                '出咗喇！係 {num}，{cantonese}！',
+                '嚟喇嚟喇！{num}，{cantonese}！',
+                '開出嘅係 {num}，{cantonese}！',
+                '聽住聽住！{num}，即係{cantonese}！',
+                '今次係幾多？{num}！{cantonese}！',
+                '又嚟喇！{num}號，{cantonese}！'
+            ],
+            
+            // Exciting/encouraging phrases
+            exciting: [
+                '{num}！{cantonese}！啱唔啱你用先？',
+                '{cantonese}！{num}呀！有冇人中？',
+                '好嘢！{num}，{cantonese}！快啲mark低佢！',
+                '{num}號出咗！{cantonese}！差唔多賓果未呀？',
+                '睇下有冇你要嘅？{num}，{cantonese}！',
+                '呢個你有冇？{num}，{cantonese}！',
+                '{cantonese}呀！{num}！好彩嘅話就賓果喇！'
+            ],
+            
+            // Interactive/playful phrases
+            playful: [
+                '你哋嗌大聲啲！我聽到喇！係{num}，{cantonese}！',
+                '邊個要{cantonese}？恭喜！出咗{num}喇！',
+                '估下係乜嘢？哈哈！係{num}，{cantonese}！',
+                '好運嚟喇！{num}呀！{cantonese}！',
+                '哇！{num}號！{cantonese}！好sharp呀！',
+                '又中咗！{num}，{cantonese}！勁呀你哋！',
+                'Bingo之神聽到你哋喇！{num}，{cantonese}！'
+            ],
+            
+            // Special number comments
+            special: [
+                '靚號碼！{num}，{cantonese}！好意頭呀！',
+                '幸運號碼{num}！{cantonese}！有人要賓果未？',
+                '發達啦！{num}號，{cantonese}！',
+                '開波喇！{num}，{cantonese}！全場聽住！',
+                '又係{num}！{cantonese}！仲差幾多個？'
+            ],
+            
+            // Pre-draw teasers (spoken before showing number)
+            teasers: [
+                '嚟緊嗰個號碼會係邊個呢？',
+                '你哋準備好未呀？下一個嚟喇！',
+                '估下係唔係你要嘅？',
+                '呢個可能係最後一個喇！',
+                '好緊張呀！會唔係你嘅號碼呢？',
+                '睇下你哋嘅運氣點！',
+                '集中精神！下一個號碼嚟喇！'
+            ]
+        };
+
+        // Special lucky numbers and their comments
+        const luckyNumberComments = {
+            8: '發發發！好意頭呀！',
+            18: '要發！',
+            28: '易發！',
+            38: '生意發！',
+            48: '四季發財！',
+            58: '唔發都唔得！',
+            68: '路路發！',
+            88: '雙發！發到笑！',
+            6: '六六大順！',
+            66: '順順利利！',
+            9: '長長久久！',
+            99: '天長地久！',
+            3: '生生猛猛！',
+            7: '起呀！',
+            13: '實升！好彩嘅！',
+            69: '長長久久又順利！'
+        };
+
+        // Get a random phrase for the number
+        function getRandomCallPhrase(number) {
+            const cantonese = cantoneseNumbers[number];
+            let phraseType;
+            let phrases;
+            
+            // 30% chance for exciting, 30% playful, 20% special, 20% standard
+            const rand = Math.random();
+            if (rand < 0.3) {
+                phraseType = 'exciting';
+            } else if (rand < 0.6) {
+                phraseType = 'playful';
+            } else if (rand < 0.8) {
+                phraseType = 'special';
+            } else {
+                phraseType = 'standard';
+            }
+            
+            phrases = bingoCallPhrases[phraseType];
+            let phrase = phrases[Math.floor(Math.random() * phrases.length)];
+            
+            // Replace placeholders
+            phrase = phrase.replace(/{num}/g, number);
+            phrase = phrase.replace(/{cantonese}/g, cantonese);
+            
+            // Add lucky number comment if applicable
+            if (luckyNumberComments[number]) {
+                phrase += ' ' + luckyNumberComments[number];
+            }
+            
+            return phrase;
+        }
+
+        // Get a random teaser phrase (before showing number)
+        function getRandomTeaser() {
+            const teasers = bingoCallPhrases.teasers;
+            return teasers[Math.floor(Math.random() * teasers.length)];
+        }
+
+        // Game state
+        let availableNumbers = [];
+        let calledNumbers = [];
+        let bingoCard = [];
+        let autoDrawInterval = null;
+
+        // Initialize game
+        function initGame() {
+            availableNumbers = Array.from({length: 75}, (_, i) => i + 1);
+            calledNumbers = [];
+            if (autoDrawInterval) {
+                clearTimeout(autoDrawInterval);
+            }
+            autoDrawInterval = null;
+            document.getElementById('autoBtn').textContent = '⚡ 自動抽號 Auto Draw';
+            updateStats();
+            generateNumberBoard();
+        }
+
+        // Generate bingo card
+        function generateBingoCard() {
+            bingoCard = [];
+            const card = document.getElementById('bingoCard');
+            card.innerHTML = '';
+
+            // Randomize card name
+            const cardNames = ['旺到底','潮運來','贏全場','贏爆燈','亞嘉世','勁好運','開口中','超順利'];
+            const pickedName = cardNames[Math.floor(Math.random() * cardNames.length)];
+
+            // Card header with two flashing GOLD logos and name
+            const headerDiv = document.getElementById('bingoCardHeader');
+            headerDiv.innerHTML = `
+                <div class="bingo-card-header">
+                    <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" class="bingo-card-logo" style="height:4.4em;width:auto;">
+                    <span class="bingo-card-name">${pickedName}</span>
+                    <span class="bingo-card-bingo">BINGO</span>
+                    <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" class="bingo-card-logo" style="height:4.4em;width:auto;">
+                </div>
+            `;
+
+            // Restore BINGO header row
+            ['B', 'I', 'N', 'G', 'O'].forEach(letter => {
+                const header = document.createElement('div');
+                header.className = 'bingo-header';
+                header.textContent = letter;
+                card.appendChild(header);
+            });
+
+            // Generate numbers for each column
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'bingo-cell';
+                    // Center square: ORGANIZATION LOGO (PVCBSLOGO), NO TICK
+                    if (row === 2 && col === 2) {
+                        cell.innerHTML = `<img src="assets/logos/PVCBSLOGO.png" alt="Organization Logo" style="height:80%;width:80%;object-fit:contain;display:block;margin:auto;">`;
+                        cell.classList.add('free'); // NO 'marked', so no tick
+                        bingoCard.push('ORGLOGO');
+                    } else {
+                        // Each column has specific range: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
+                        const min = col * 15 + 1;
+                        const max = col * 15 + 15;
+                        const num = getRandomNumber(min, max, bingoCard);
+                        cell.textContent = num;
+                        cell.addEventListener('click', () => toggleCell(cell, num));
+                        bingoCard.push(num);
+                    }
+                    card.appendChild(cell);
+                }
+            }
+        }
+
+        // Get random number not already in card
+        function getRandomNumber(min, max, exclude) {
+            let num;
+            do {
+                num = Math.floor(Math.random() * (max - min + 1)) + min;
+            } while (exclude.includes(num));
+            return num;
+        }
+
+        // Toggle cell marking
+        function toggleCell(cell, num) {
+            if (cell.classList.contains('free')) return;
+            if (calledNumbers.includes(num)) {
+                cell.classList.add('marked');
+                checkWin();
+            }
+        }
+
+        // Generate number board
+        function generateNumberBoard() {
+            const board = document.getElementById('numberBoard');
+            board.innerHTML = '';
+            
+            for (let i = 1; i <= 75; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'number-ball';
+                ball.textContent = i;
+                ball.id = `ball-${i}`;
+                board.appendChild(ball);
+            }
+        }
+
+        // Draw a number
+        function drawNumber() {
+            if (availableNumbers.length === 0) {
+                alert('所有號碼都抽咗！All numbers drawn!');
+                return;
+            }
+            revealNumber();
+        }
+
+        // Reveal the actual number (separated for teaser timing)
+        function revealNumber() {
+            const index = Math.floor(Math.random() * availableNumbers.length);
+            const number = availableNumbers.splice(index, 1)[0];
+            calledNumbers.push(number);
+
+            // Simple phrase: 號碼係 X
+            const phrase = `號碼係 ${number}`;
+
+            // Update display with animated entrance
+            const ballElement = document.getElementById('currentBall');
+            ballElement.style.animation = 'none';
+            setTimeout(() => {
+                ballElement.style.animation = 'ballPop 0.5s ease-out';
+                ballElement.textContent = number;
+            }, 10);
+            
+            document.getElementById('cantoneseText').textContent = phrase;
+            
+            // Mark on number board
+            const ball = document.getElementById(`ball-${number}`);
+            if (ball) {
+                ball.classList.add('called');
+            }
+
+            updateStats();
+            checkWin();
+            
+            // Broadcast to all viewers if HOST
+            if (gameMode === 'host') {
+                broadcastNumber(number, phrase);
+            }
+            
+            // Only VIEWER hears voice - HOST is silent
+            if (gameMode === 'viewer') {
+                speakCantonese(number, phrase);
+                setTimeout(() => {
+                    speakCantonese(number, phrase);
+                }, 2000);
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('drawnCount').textContent = calledNumbers.length;
+            document.getElementById('remainingCount').textContent = availableNumbers.length;
+        }
+
+        // Check for win
+        function checkWin() {
+            const cells = Array.from(document.querySelectorAll('.bingo-cell'));
+            const marked = cells.map(cell => cell.classList.contains('marked'));
+
+            // Check rows
+            for (let i = 0; i < 5; i++) {
+                const rowStart = (i + 1) * 5;
+                if (marked.slice(rowStart, rowStart + 5).every(m => m)) {
+                    showWinner('橫線賓果！Horizontal BINGO!');
+                    return;
+                }
+            }
+
+            // Check columns
+            for (let i = 0; i < 5; i++) {
+                const col = [5 + i, 10 + i, 15 + i, 20 + i, 25 + i];
+                if (col.every(idx => marked[idx])) {
+                    showWinner('直線賓果！Vertical BINGO!');
+                    return;
+                }
+            }
+
+            // Check diagonals
+            if ([6, 12, 18, 24, 30].every(idx => marked[idx])) {
+                showWinner('斜線賓果！Diagonal BINGO!');
+                return;
+            }
+            if ([10, 12, 14, 16, 20].every(idx => marked[idx])) {
+                showWinner('斜線賓果！Diagonal BINGO!');
+                return;
+            }
+        }
+
+        // Show winner - disabled to keep game continuity
+        function showWinner(message) {
+            // Don't show overlay popup - game continues uninterrupted
+            console.log("BINGO detected: " + message);
+        }
+
+        // Create confetti
+        function createConfetti() {
+            const colors = ['#f093fb', '#f5576c', '#667eea', '#764ba2', '#ffecd2', '#fcb69f'];
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 3 + 's';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 30);
+            }
+        }
+
+        // Play sound
+        function playSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Speak number in Cantonese using Browser Voice (Web Speech API)
+        function speakCantonese(number, phrase) {
+            if (!VOICE_ENABLED || !('speechSynthesis' in window)) {
+                return;
+            }
+
+            // Cancel any ongoing speech first
+            speechSynthesis.cancel();
+            
+            const text = phrase || `號碼係 ${number}`;
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Try to find a Cantonese voice
+            const voices = speechSynthesis.getVoices();
+            const cantoneseVoice = voices.find(voice => 
+                voice.lang.includes('zh-HK') || 
+                voice.lang.includes('yue') ||
+                voice.lang.includes('zh-TW')
+            );
+            
+            if (cantoneseVoice) {
+                utterance.voice = cantoneseVoice;
+            }
+            
+            utterance.lang = 'zh-HK';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            speechSynthesis.speak(utterance);
+        }
+
+        // Load voices when available
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = () => {
+                const voices = speechSynthesis.getVoices();
+                console.log('Available voices:', voices.filter(v => v.lang.includes('zh')));
+            };
+        }
+
+        // Event listeners
+        document.getElementById('drawBtn').addEventListener('click', drawNumber);
+        
+        document.getElementById('autoBtn').addEventListener('click', () => {
+            if (autoDrawInterval) {
+                clearTimeout(autoDrawInterval);
+                autoDrawInterval = null;
+                document.getElementById('autoBtn').textContent = '⚡ 自動抽號 Auto Draw';
+            } else {
+                // Varied timing for excitement (2-4 seconds between draws)
+                function scheduleDraw() {
+                    const delay = 2000 + Math.random() * 2000; // 2-4 seconds
+                    autoDrawInterval = setTimeout(() => {
+                        if (availableNumbers.length > 0) {
+                            drawNumber();
+                            scheduleDraw(); // Schedule next draw
+                        } else {
+                            document.getElementById('autoBtn').textContent = '⚡ 自動抽號 Auto Draw';
+                            autoDrawInterval = null;
+                        }
+                    }, delay);
+                }
+                scheduleDraw();
+                document.getElementById('autoBtn').textContent = '⏸ 停止 Stop';
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            // Clear Firebase data if HOST
+            if (gameMode === 'host' && isFirebaseConfigured) {
+                // Clear all game data - this triggers viewer reset automatically
+                database.ref('gameState').remove()
+                    .then(() => console.log('✅ Firebase game state cleared'))
+                    .catch(err => console.error('Clear Firebase error:', err));
+                
+                database.ref('bingoClaims').remove()
+                    .then(() => console.log('✅ Firebase claims cleared'))
+                    .catch(err => console.error('Clear claims error:', err));
+                    
+                database.ref('verification').remove()
+                    .then(() => console.log('✅ Firebase verification cleared'))
+                    .catch(err => console.error('Clear verification error:', err));
+                
+                // Reset all player card counts (keep registrations)
+                database.ref('playerRegistry').once('value').then(snap => {
+                    const players = snap.val();
+                    if (players) {
+                        const updates = {};
+                        Object.keys(players).forEach(pid => {
+                            updates[`playerRegistry/${pid}/cardsUsed`] = 0;
+                        });
+                        return database.ref().update(updates);
+                    }
+                }).then(() => console.log('✅ Player card counts reset'))
+                  .catch(err => console.error('Reset player counts error:', err));
+            }
+            
+            // Reset local game state
+            availableNumbers = Array.from({length: 75}, (_, i) => i + 1);
+            calledNumbers = [];
+            updateStats();
+            
+            if (gameMode === 'viewer') {
+                generateBingoCard();
+            }
+            
+            // Clear number board highlights
+            document.querySelectorAll('.number-ball.called').forEach(ball => {
+                ball.classList.remove('called');
+            });
+            
+            document.getElementById('currentBall').textContent = '--';
+            document.getElementById('cantoneseText').textContent = '開始遊戲';
+        });
+
+        document.getElementById('newCardBtn').addEventListener('click', () => {
+            if (gameMode === 'viewer' && currentPlayerId) {
+                requestNewCard();
+            } else {
+                generateBingoCard();
+            }
+        });
+
+        document.getElementById('closeWinBtn').addEventListener('click', () => {
+            document.getElementById('winnerOverlay').classList.remove('show');
+        });
+
+        // Background Music Controls
+        const bgMusic = document.getElementById('bgMusic');
+        const musicToggle = document.getElementById('musicToggle');
+        const musicIcon = document.getElementById('musicIcon');
+        const musicText = document.getElementById('musicText');
+        const volumeSlider = document.getElementById('volumeSlider');
+        let isPlaying = false;
+
+        // Set initial volume
+        bgMusic.volume = volumeSlider.value / 100;
+
+        musicToggle.addEventListener('click', () => {
+            if (isPlaying) {
+                bgMusic.pause();
+                musicToggle.classList.remove('playing');
+                musicIcon.textContent = '🎵';
+                musicText.textContent = '播放音樂';
+                isPlaying = false;
+            } else {
+                bgMusic.play().catch(err => {
+                    console.log('Music playback requires user interaction first');
+                });
+                musicToggle.classList.add('playing');
+                musicIcon.textContent = '⏸';
+                musicText.textContent = '停止音樂';
+                isPlaying = true;
+            }
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            bgMusic.volume = e.target.value / 100;
+        });
+
+        // Handle title logo errors
+        document.querySelectorAll('.title-logo').forEach(img => {
+            img.addEventListener('error', function() {
+                console.log('Title logo not found, hiding');
+                this.style.display = 'none';
+            });
+        });
+
+        // Handle video logo error
+        document.getElementById('organizerLogo').addEventListener('error', function() {
+            console.log('Organizer video logo failed to load');
+        });
+
+        // Check and display voice status
+        function updateVoiceStatus() {
+            const statusElement = document.getElementById('voiceStatusText');
+            const statusBox = document.getElementById('voiceStatus');
+            
+            if (!VOICE_ENABLED) {
+                statusElement.textContent = '已停用 Disabled';
+                statusBox.style.background = '#ffebee';
+            } else if (!('speechSynthesis' in window)) {
+                statusElement.innerHTML = '❌ 不支援 Not Supported <br><small>Browser voice not available</small>';
+                statusBox.style.background = '#ffebee';
+            } else {
+                statusElement.textContent = '✓ 已啟用 Enabled (瀏覽器語音)';
+                statusBox.style.background = '#e8f5e9';
+            }
+        }
+
+        // Initialize on load
+        // NOTE: initGame() and generateBingoCard() moved to initializeGameMode()
+        // They should only run for VIEWER mode, not HOST
+        updateVoiceStatus();
+    </script>
+    
+    <!-- Browser Voice Info -->
+    <!--
+    ==========================================
+    BROWSER VOICE (Web Speech API)
+    ==========================================
+    
+    This game now uses your browser's built-in Cantonese voice.
+    
+    - No API key or billing required
+    - Works immediately
+    - Voice quality depends on your browser and OS
+    
+    Best results on:
+    - Chrome/Edge with Windows 10+ (includes Cantonese voices)
+    - macOS with Hong Kong language pack installed
+    
+    If you hear Mandarin instead of Cantonese:
+    1. Windows: Settings → Time & Language → Speech
+    2. Add "Chinese (Hong Kong)" language pack
+    3. Restart browser
+    
+    To switch to Google Cloud TTS for better quality:
+    - See VOICE_SETUP_INSTRUCTIONS.md
+    ==========================================
+    -->
+</body>
+</html>

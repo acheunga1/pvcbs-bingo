@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BINGO Game 遊戲</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Background video */
+        #bgVideo {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+            opacity: 0.3;
+        }
+
+        /* Background image overlay (fallback if no video) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('assets/images/background.jpg');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            z-index: -1;
+        }
+
+        /* Decorative floating elements */
+        .floating-decoration {
+            position: fixed;
+            pointer-events: none;
+            opacity: 0.15;
+            z-index: 0;
+        }
+
+        .decoration-1 {
+            top: 10%;
+            left: 5%;
+            width: 150px;
+            height: 150px;
+            background: url('assets/images/decoration1.png') no-repeat center;
+            background-size: contain;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .decoration-2 {
+            top: 60%;
+            right: 8%;
+            width: 120px;
+            height: 120px;
+            background: url('assets/images/decoration2.png') no-repeat center;
+            background-size: contain;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Organizer Logo Header (Top) */
+        .organizer-header {
+            text-align: center;
+            padding: 30px 40px;
+            margin-bottom: 20px;
+        }
+
+        .organizer-logo-video {
+            max-width: 500px;
+            width: 100%;
+            height: auto;
+            max-height: 150px;
+            object-fit: contain;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.2));
+        }
+
+        /* AlphaSight Gold Logo (Bottom-Left) */
+        .sponsor-logo-container {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 1000;
+            padding: 20px 30px;
+            transition: transform 0.3s;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+        }
+
+        .sponsor-logo-container:hover {
+            transform: translateY(-5px) scale(1.05);
+        }
+
+        .sponsor-logo {
+            height: 90px;
+            max-width: 250px;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Music controls */
+        .music-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 25px;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .music-toggle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .music-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .music-toggle.playing {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #volumeSlider {
+            width: 80px;
+            cursor: pointer;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .controls-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .current-number {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .current-number h2 {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        #currentBall {
+            font-size: 4em;
+            color: white;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: ballPop 0.5s ease-out;
+        }
+
+        @keyframes ballPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .cantonese-text {
+            font-size: 1.5em;
+            color: white;
+            margin-top: 15px;
+            font-weight: 500;
+            line-height: 1.4;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 10px;
+            animation: textFadeIn 0.5s ease-out;
+        }
+
+        @keyframes textFadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #drawBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        #autoBtn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        #resetBtn {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        #newCardBtn {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .stats {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 10px;
+        }
+
+        .stats h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .stats p {
+            font-size: 1.1em;
+            color: #555;
+            margin: 5px 0;
+        }
+
+        .board-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .bingo-card {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .bingo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .bingo-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            font-size: 1.8em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bingo-cell:hover:not(.marked):not(.free) {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+
+        .bingo-cell.marked {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            transform: scale(0.95);
+        }
+
+        .bingo-cell.marked::after {
+            content: '✓';
+            position: absolute;
+            font-size: 2em;
+            animation: checkMark 0.5s ease-out;
+        }
+
+        @keyframes checkMark {
+            0% { transform: scale(0) rotate(-45deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+
+        .bingo-cell.free {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #666;
+            font-size: 1.2em;
+            cursor: default;
+        }
+
+        .number-board {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            gap: 8px;
+        }
+
+        .number-ball {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            font-size: 1em;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .number-ball.called {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.1);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .winner-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .winner-overlay.show {
+            display: flex;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .winner-message {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 60px;
+            border-radius: 20px;
+            text-align: center;
+            animation: bounceIn 0.8s;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .winner-message h2 {
+            font-size: 4em;
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .winner-message p {
+            font-size: 2em;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            position: absolute;
+            animation: confetti-fall 3s linear infinite;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .game-area {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .number-board {
+                grid-template-columns: repeat(10, 1fr);
+            }
+            
+            .organizer-logo-video {
+                max-width: 400px;
+                max-height: 120px;
+            }
+            
+            .sponsor-logo-container {
+                bottom: 20px;
+                left: 20px;
+                padding: 15px 20px;
+            }
+            
+            .sponsor-logo {
+                height: 70px;
+                max-width: 200px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .organizer-logo-video {
+                max-width: 300px;
+                max-height: 100px;
+            }
+            
+            .sponsor-logo-container {
+                bottom: 15px;
+                left: 15px;
+                padding: 10px 15px;
+            }
+            
+            .sponsor-logo {
+                height: 50px;
+                max-width: 150px;
+            }
+            
+            .music-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Video (optional - only shows if file exists) -->
+    <video id="bgVideo" autoplay loop muted playsinline>
+        <source src="assets/images/background.mp4" type="video/mp4">
+    </video>
+
+    <!-- Floating decorations -->
+    <div class="floating-decoration decoration-1"></div>
+    <div class="floating-decoration decoration-2"></div>
+
+    <!-- AlphaSight Gold Logo (Bottom-Left) -->
+    <div class="sponsor-logo-container">
+        <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" class="sponsor-logo" id="alphasightLogo">
+    </div>
+
+    <div class="container">
+        <!-- Organizer Logo Header (Top - Animated MP4) -->
+        <div class="organizer-header">
+            <video class="organizer-logo-video" autoplay loop muted playsinline id="organizerLogo">
+                <source src="assets/logos/pvcbslogo_transparant.mp4" type="video/mp4">
+                <!-- Fallback to image if video doesn't load -->
+                <img src="assets/logos/organizer-logo.png" alt="Organizer Logo" style="max-width: 500px; height: auto;">
+            </video>
+            
+            <div class="music-controls">
+                <button class="music-toggle" id="musicToggle">
+                    <span id="musicIcon">🎵</span>
+                    <span id="musicText">播放音樂</span>
+                </button>
+                <div class="volume-control">
+                    <span>🔊</span>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                </div>
+            </div>
+        </div>
+
+        <h1>🎰 BINGO GAME 🎰</h1>
+        
+        <div class="game-area">
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="current-number">
+                    <h2>當前號碼 Current Number</h2>
+                    <div id="currentBall">--</div>
+                    <div class="cantonese-text" id="cantoneseText">開始遊戲</div>
+                </div>
+
+                <div class="controls">
+                    <button id="drawBtn">🎱 抽號碼 Draw Number</button>
+                    <button id="autoBtn">⚡ 自動抽號 Auto Draw</button>
+                    <button id="resetBtn">🔄 重新開始 Reset Game</button>
+                    <button id="newCardBtn">🎴 新卡片 New Card</button>
+                </div>
+
+                <div class="stats">
+                    <h3>📊 遊戲統計 Statistics</h3>
+                    <p>已抽號碼 Drawn: <strong id="drawnCount">0</strong> / 75</p>
+                    <p>剩餘號碼 Remaining: <strong id="remainingCount">75</strong></p>
+                    <p id="voiceStatus" style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 0.9em;">
+                        🔊 語音狀態 Voice: <strong id="voiceStatusText">未配置 Not Configured</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Board Section -->
+            <div class="board-section">
+                <h2 style="text-align: center; margin-bottom: 20px; color: #333;">你嘅賓果卡 Your Bingo Card</h2>
+                <div class="bingo-card" id="bingoCard"></div>
+                
+                <h3 style="text-align: center; margin: 30px 0 20px; color: #333;">所有號碼 Number Board (1-75)</h3>
+                <div class="number-board" id="numberBoard"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="winner-overlay" id="winnerOverlay">
+        <div class="winner-message">
+            <h2>🎉 BINGO! 🎉</h2>
+            <p id="winMessage">恭喜你贏咗！</p>
+            <button id="closeWinBtn" style="font-size: 1.2em;">繼續玩 Continue</button>
+        </div>
+    </div>
+
+    <!-- Background Music -->
+    <audio id="bgMusic" loop>
+        <source src="assets/music/bingo-background.mp3" type="audio/mpeg">
+        <source src="assets/music/bingo-background.ogg" type="audio/ogg">
+    </audio>
+
+    <script>
+        // ==========================================
+        // BROWSER VOICE CONFIGURATION
+        // ==========================================
+        // Using Web Speech API (built into browser, no API key needed)
+        const VOICE_ENABLED = true; // Set to false to disable voice
+        const USE_BROWSER_VOICE = true; // Using browser's built-in Cantonese voice
+
+        // Cantonese number mappings
+        const cantoneseNumbers = {
+            1: '一', 2: '二', 3: '三', 4: '四', 5: '五',
+            6: '六', 7: '七', 8: '八', 9: '九', 10: '十',
+            11: '十一', 12: '十二', 13: '十三', 14: '十四', 15: '十五',
+            16: '十六', 17: '十七', 18: '十八', 19: '十九', 20: '二十',
+            21: '二十一', 22: '二十二', 23: '二十三', 24: '二十四', 25: '二十五',
+            26: '二十六', 27: '二十七', 28: '二十八', 29: '二十九', 30: '三十',
+            31: '三十一', 32: '三十二', 33: '三十三', 34: '三十四', 35: '三十五',
+            36: '三十六', 37: '三十七', 38: '三十八', 39: '三十九', 40: '四十',
+            41: '四十一', 42: '四十二', 43: '四十三', 44: '四十四', 45: '四十五',
+            46: '四十六', 47: '四十七', 48: '四十八', 49: '四十九', 50: '五十',
+            51: '五十一', 52: '五十二', 53: '五十三', 54: '五十四', 55: '五十五',
+            56: '五十六', 57: '五十七', 58: '五十八', 59: '五十九', 60: '六十',
+            61: '六十一', 62: '六十二', 63: '六十三', 64: '六十四', 65: '六十五',
+            66: '六十六', 67: '六十七', 68: '六十八', 69: '六十九', 70: '七十',
+            71: '七十一', 72: '七十二', 73: '七十三', 74: '七十四', 75: '七十五'
+        };
+
+        // Fun Cantonese phrases for Bingo calling
+        const bingoCallPhrases = {
+            // Standard number announcements with personality
+            standard: [
+                '下一個號碼係 {num}！{cantonese}！',
+                '出咗喇！係 {num}，{cantonese}！',
+                '嚟喇嚟喇！{num}，{cantonese}！',
+                '開出嘅係 {num}，{cantonese}！',
+                '聽住聽住！{num}，即係{cantonese}！',
+                '今次係幾多？{num}！{cantonese}！',
+                '又嚟喇！{num}號，{cantonese}！'
+            ],
+            
+            // Exciting/encouraging phrases
+            exciting: [
+                '{num}！{cantonese}！啱唔啱你用先？',
+                '{cantonese}！{num}呀！有冇人中？',
+                '好嘢！{num}，{cantonese}！快啲mark低佢！',
+                '{num}號出咗！{cantonese}！差唔多賓果未呀？',
+                '睇下有冇你要嘅？{num}，{cantonese}！',
+                '呢個你有冇？{num}，{cantonese}！',
+                '{cantonese}呀！{num}！好彩嘅話就賓果喇！'
+            ],
+            
+            // Interactive/playful phrases
+            playful: [
+                '你哋嗌大聲啲！我聽到喇！係{num}，{cantonese}！',
+                '邊個要{cantonese}？恭喜！出咗{num}喇！',
+                '估下係乜嘢？哈哈！係{num}，{cantonese}！',
+                '好運嚟喇！{num}呀！{cantonese}！',
+                '哇！{num}號！{cantonese}！好sharp呀！',
+                '又中咗！{num}，{cantonese}！勁呀你哋！',
+                'Bingo之神聽到你哋喇！{num}，{cantonese}！'
+            ],
+            
+            // Special number comments
+            special: [
+                '靚號碼！{num}，{cantonese}！好意頭呀！',
+                '幸運號碼{num}！{cantonese}！有人要賓果未？',
+                '發達啦！{num}號，{cantonese}！',
+                '開波喇！{num}，{cantonese}！全場聽住！',
+                '又係{num}！{cantonese}！仲差幾多個？'
+            ],
+            
+            // Pre-draw teasers (spoken before showing number)
+            teasers: [
+                '嚟緊嗰個號碼會係邊個呢？',
+                '你哋準備好未呀？下一個嚟喇！',
+                '估下係唔係你要嘅？',
+                '呢個可能係最後一個喇！',
+                '好緊張呀！會唔係你嘅號碼呢？',
+                '睇下你哋嘅運氣點！',
+                '集中精神！下一個號碼嚟喇！'
+            ]
+        };
+
+        // Special lucky numbers and their comments
+        const luckyNumberComments = {
+            8: '發發發！好意頭呀！',
+            18: '要發！',
+            28: '易發！',
+            38: '生意發！',
+            48: '四季發財！',
+            58: '唔發都唔得！',
+            68: '路路發！',
+            88: '雙發！發到笑！',
+            6: '六六大順！',
+            66: '順順利利！',
+            9: '長長久久！',
+            99: '天長地久！',
+            3: '生生猛猛！',
+            7: '起呀！',
+            13: '實升！好彩嘅！',
+            69: '長長久久又順利！'
+        };
+
+        // Get a random phrase for the number
+        function getRandomCallPhrase(number) {
+            const cantonese = cantoneseNumbers[number];
+            let phraseType;
+            let phrases;
+            
+            // 30% chance for exciting, 30% playful, 20% special, 20% standard
+            const rand = Math.random();
+            if (rand < 0.3) {
+                phraseType = 'exciting';
+            } else if (rand < 0.6) {
+                phraseType = 'playful';
+            } else if (rand < 0.8) {
+                phraseType = 'special';
+            } else {
+                phraseType = 'standard';
+            }
+            
+            phrases = bingoCallPhrases[phraseType];
+            let phrase = phrases[Math.floor(Math.random() * phrases.length)];
+            
+            // Replace placeholders
+            phrase = phrase.replace(/{num}/g, number);
+            phrase = phrase.replace(/{cantonese}/g, cantonese);
+            
+            // Add lucky number comment if applicable
+            if (luckyNumberComments[number]) {
+                phrase += ' ' + luckyNumberComments[number];
+            }
+            
+            return phrase;
+        }
+
+        // Get a random teaser phrase (before showing number)
+        function getRandomTeaser() {
+            const teasers = bingoCallPhrases.teasers;
+            return teasers[Math.floor(Math.random() * teasers.length)];
+        }
+
+        // Game state
+        let availableNumbers = [];
+        let calledNumbers = [];
+        let bingoCard = [];
+        let autoDrawInterval = null;
+
+        // Initialize game
+        function initGame() {
+            availableNumbers = Array.from({length: 75}, (_, i) => i + 1);
+            calledNumbers = [];
+            if (autoDrawInterval) {
+                clearTimeout(autoDrawInterval);
+            }
+            autoDrawInterval = null;
+            document.getElementById('autoBtn').textContent = '⚡ 自動抽號 Auto Draw';
+            updateStats();
+            generateNumberBoard();
+        }
+
+        // Generate bingo card
+        function generateBingoCard() {
+            bingoCard = [];
+            const card = document.getElementById('bingoCard');
+            card.innerHTML = '';
+
+            // Headers
+            ['B', 'I', 'N', 'G', 'O'].forEach(letter => {
+                const header = document.createElement('div');
+                header.className = 'bingo-header';
+                header.textContent = letter;
+                card.appendChild(header);
+            });
+
+            // Generate numbers for each column
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'bingo-cell';
+                    
+                    // Free space in center
+                    if (row === 2 && col === 2) {
+                        cell.textContent = 'FREE';
+                        cell.classList.add('free', 'marked');
+                        bingoCard.push('FREE');
+                    } else {
+                        // Each column has specific range: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
+                        const min = col * 15 + 1;
+                        const max = col * 15 + 15;
+                        const num = getRandomNumber(min, max, bingoCard);
+                        cell.textContent = num;
+                        cell.addEventListener('click', () => toggleCell(cell, num));
+                        bingoCard.push(num);
+                    }
+                    
+                    card.appendChild(cell);
+                }
+            }
+        }
+
+        // Get random number not already in card
+        function getRandomNumber(min, max, exclude) {
+            let num;
+            do {
+                num = Math.floor(Math.random() * (max - min + 1)) + min;
+            } while (exclude.includes(num));
+            return num;
+        }
+
+        // Toggle cell marking
+        function toggleCell(cell, num) {
+            if (cell.classList.contains('free')) return;
+            if (calledNumbers.includes(num)) {
+                cell.classList.add('marked');
+                checkWin();
+            }
+        }
+
+        // Generate number board
+        function generateNumberBoard() {
+            const board = document.getElementById('numberBoard');
+            board.innerHTML = '';
+            
+            for (let i = 1; i <= 75; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'number-ball';
+                ball.textContent = i;
+                ball.id = `ball-${i}`;
+                board.appendChild(ball);
+            }
+        }
+
+        // Draw a number
+        function drawNumber() {
+            if (availableNumbers.length === 0) {
+                alert('所有號碼都抽咗！All numbers drawn!');
+                return;
+            }
+
+            // 40% chance to speak a teaser first
+            if (Math.random() < 0.4) {
+                const teaser = getRandomTeaser();
+                document.getElementById('cantoneseText').textContent = teaser;
+                speakCantonese(null, teaser);
+                
+                // Wait 2 seconds before revealing number
+                setTimeout(revealNumber, 2000);
+            } else {
+                revealNumber();
+            }
+        }
+
+        // Reveal the actual number (separated for teaser timing)
+        function revealNumber() {
+            const index = Math.floor(Math.random() * availableNumbers.length);
+            const number = availableNumbers.splice(index, 1)[0];
+            calledNumbers.push(number);
+
+            // Get entertaining phrase
+            const phrase = getRandomCallPhrase(number);
+
+            // Update display with animated entrance
+            const ballElement = document.getElementById('currentBall');
+            ballElement.style.animation = 'none';
+            setTimeout(() => {
+                ballElement.style.animation = 'ballPop 0.5s ease-out';
+                ballElement.textContent = number;
+            }, 10);
+            
+            document.getElementById('cantoneseText').textContent = phrase;
+            
+            // Mark on number board
+            const ball = document.getElementById(`ball-${number}`);
+            if (ball) {
+                ball.classList.add('called');
+            }
+
+            // Auto-mark on bingo card
+            const cells = document.querySelectorAll('.bingo-cell');
+            cells.forEach(cell => {
+                if (parseInt(cell.textContent) === number) {
+                    cell.classList.add('marked');
+                }
+            });
+
+            updateStats();
+            checkWin();
+            
+            // Play sound and speak entertaining phrase
+            playSound();
+            speakCantonese(number, phrase);
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('drawnCount').textContent = calledNumbers.length;
+            document.getElementById('remainingCount').textContent = availableNumbers.length;
+        }
+
+        // Check for win
+        function checkWin() {
+            const cells = Array.from(document.querySelectorAll('.bingo-cell'));
+            const marked = cells.map(cell => cell.classList.contains('marked'));
+
+            // Check rows
+            for (let i = 0; i < 5; i++) {
+                const rowStart = (i + 1) * 5;
+                if (marked.slice(rowStart, rowStart + 5).every(m => m)) {
+                    showWinner('橫線賓果！Horizontal BINGO!');
+                    return;
+                }
+            }
+
+            // Check columns
+            for (let i = 0; i < 5; i++) {
+                const col = [5 + i, 10 + i, 15 + i, 20 + i, 25 + i];
+                if (col.every(idx => marked[idx])) {
+                    showWinner('直線賓果！Vertical BINGO!');
+                    return;
+                }
+            }
+
+            // Check diagonals
+            if ([6, 12, 18, 24, 30].every(idx => marked[idx])) {
+                showWinner('斜線賓果！Diagonal BINGO!');
+                return;
+            }
+            if ([10, 12, 14, 16, 20].every(idx => marked[idx])) {
+                showWinner('斜線賓果！Diagonal BINGO!');
+                return;
+            }
+        }
+
+        // Show winner
+        function showWinner(message) {
+            if (autoDrawInterval) {
+                clearTimeout(autoDrawInterval);
+            }
+            autoDrawInterval = null;
+            document.getElementById('autoBtn').textContent = '⚡ 自動抽號 Auto Draw';
+            document.getElementById('winMessage').textContent = message;
+            document.getElementById('winnerOverlay').classList.add('show');
+            createConfetti();
+        }
+
+        // Create confetti
+        function createConfetti() {
+            const colors = ['#f093fb', '#f5576c', '#667eea', '#764ba2', '#ffecd2', '#fcb69f'];
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 3 + 's';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 30);
+            }
+        }
+
+        // Play sound
+        function playSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Speak number in Cantonese using Browser Voice (Web Speech API)
+        function speakCantonese(number, phrase) {
+            if (!VOICE_ENABLED || !('speechSynthesis' in window)) {
+                console.log('Voice disabled or not supported');
+                return;
+            }
+
+            const text = phrase || cantoneseNumbers[number];
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Try to find a Cantonese voice
+            const voices = speechSynthesis.getVoices();
+            const cantoneseVoice = voices.find(voice => 
+                voice.lang.includes('zh-HK') || 
+                voice.lang.includes('yue') ||
+                voice.lang.includes('zh-TW')
+            );
+            
+            if (cantoneseVoice) {
+                utterance.voice = cantoneseVoice;
+            }
+            
+            utterance.lang = 'zh-HK'; // Cantonese (Hong Kong)
+            utterance.rate = 0.85; // Slightly slower for clarity
+            utterance.pitch = 1.1; // Slightly higher for excitement
+            utterance.volume = 1.0;
+            
+            speechSynthesis.speak(utterance);
+        }
+
+        // Load voices when available
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = () => {
+                const voices = speechSynthesis.getVoices();
+                console.log('Available voices:', voices.filter(v => v.lang.includes('zh')));
+            };
+        }
+
+        // Event listeners
+        document.getElementById('drawBtn').addEventListener('click', drawNumber);
+        
+        document.getElementById('autoBtn').addEventListener('click', () => {
+            if (autoDrawInterval) {
+                clearTimeout(autoDrawInterval);
+                autoDrawInterval = null;
+                document.getElementById('autoBtn').textContent = '⚡ 自動抽號 Auto Draw';
+            } else {
+                // Varied timing for excitement (2-4 seconds between draws)
+                function scheduleDraw() {
+                    const delay = 2000 + Math.random() * 2000; // 2-4 seconds
+                    autoDrawInterval = setTimeout(() => {
+                        if (availableNumbers.length > 0) {
+                            drawNumber();
+                            scheduleDraw(); // Schedule next draw
+                        } else {
+                            document.getElementById('autoBtn').textContent = '⚡ 自動抽號 Auto Draw';
+                            autoDrawInterval = null;
+                        }
+                    }, delay);
+                }
+                scheduleDraw();
+                document.getElementById('autoBtn').textContent = '⏸ 停止 Stop';
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            initGame();
+            generateBingoCard();
+            document.getElementById('currentBall').textContent = '--';
+            document.getElementById('cantoneseText').textContent = '開始遊戲';
+        });
+
+        document.getElementById('newCardBtn').addEventListener('click', generateBingoCard);
+
+        document.getElementById('closeWinBtn').addEventListener('click', () => {
+            document.getElementById('winnerOverlay').classList.remove('show');
+        });
+
+        // Background Music Controls
+        const bgMusic = document.getElementById('bgMusic');
+        const musicToggle = document.getElementById('musicToggle');
+        const musicIcon = document.getElementById('musicIcon');
+        const musicText = document.getElementById('musicText');
+        const volumeSlider = document.getElementById('volumeSlider');
+        let isPlaying = false;
+
+        // Set initial volume
+        bgMusic.volume = volumeSlider.value / 100;
+
+        musicToggle.addEventListener('click', () => {
+            if (isPlaying) {
+                bgMusic.pause();
+                musicToggle.classList.remove('playing');
+                musicIcon.textContent = '🎵';
+                musicText.textContent = '播放音樂';
+                isPlaying = false;
+            } else {
+                bgMusic.play().catch(err => {
+                    console.log('Music playback requires user interaction first');
+                });
+                musicToggle.classList.add('playing');
+                musicIcon.textContent = '⏸';
+                musicText.textContent = '停止音樂';
+                isPlaying = true;
+            }
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            bgMusic.volume = e.target.value / 100;
+        });
+
+        // Handle logo errors (show placeholder if logo not found)
+        document.getElementById('alphasightLogo').addEventListener('error', function() {
+            console.log('Gold logo not found, hiding element');
+            this.parentElement.style.display = 'none';
+        });
+
+        // Handle video logo error
+        document.getElementById('organizerLogo').addEventListener('error', function() {
+            console.log('Organizer video logo failed to load');
+        });
+
+        // Check and display voice status
+        function updateVoiceStatus() {
+            const statusElement = document.getElementById('voiceStatusText');
+            const statusBox = document.getElementById('voiceStatus');
+            
+            if (!VOICE_ENABLED) {
+                statusElement.textContent = '已停用 Disabled';
+                statusBox.style.background = '#ffebee';
+            } else if (!('speechSynthesis' in window)) {
+                statusElement.innerHTML = '❌ 不支援 Not Supported <br><small>Browser voice not available</small>';
+                statusBox.style.background = '#ffebee';
+            } else {
+                statusElement.textContent = '✓ 已啟用 Enabled (瀏覽器語音)';
+                statusBox.style.background = '#e8f5e9';
+            }
+        }
+
+        // Initialize on load
+        initGame();
+        generateBingoCard();
+        updateVoiceStatus();
+    </script>
+    
+    <!-- Browser Voice Info -->
+    <!--
+    ==========================================
+    BROWSER VOICE (Web Speech API)
+    ==========================================
+    
+    This game now uses your browser's built-in Cantonese voice.
+    
+    - No API key or billing required
+    - Works immediately
+    - Voice quality depends on your browser and OS
+    
+    Best results on:
+    - Chrome/Edge with Windows 10+ (includes Cantonese voices)
+    - macOS with Hong Kong language pack installed
+    
+    If you hear Mandarin instead of Cantonese:
+    1. Windows: Settings → Time & Language → Speech
+    2. Add "Chinese (Hong Kong)" language pack
+    3. Restart browser
+    
+    To switch to Google Cloud TTS for better quality:
+    - See VOICE_SETUP_INSTRUCTIONS.md
+    ==========================================
+    -->
+</body>
+</html>

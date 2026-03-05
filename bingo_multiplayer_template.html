@@ -1,0 +1,258 @@
+﻿<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>賓果遊戲 Multiplayer Bingo</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+        }
+        
+        /* Mode Selection Dialog */
+        .mode-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .mode-dialog.hidden { display: none; }
+        
+        .mode-content {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+        }
+        
+        .mode-content h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .mode-content p {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .mode-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .mode-btn {
+            padding: 20px 40px;
+            font-size: 1.5em;
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+        
+        .mode-btn.host {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .mode-btn.viewer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .mode-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .password-input {
+            margin-top: 20px;
+            padding: 15px;
+            font-size: 1.2em;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            width: 100%;
+            display: none;
+        }
+        
+        /* Mode Badge */
+        .mode-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        .mode-badge.host {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .mode-badge.viewer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        /* The rest matches your existing bingo_game.html styles... */
+        /* Copy from your current file for logos, cards, etc. */
+        
+    </style>
+</head>
+<body>
+    <!-- Mode Selection Dialog -->
+    <div class="mode-dialog" id="modeDialog">
+        <div class="mode-content">
+            <h2> 選擇模式 Select Mode</h2>
+            <p>Are you the HOST or a VIEWER?</p>
+            <div class="mode-buttons">
+                <button class="mode-btn host" onclick="selectMode('host')">
+                     HOST<br><small>主持人</small>
+                </button>
+                <button class="mode-btn viewer" onclick="selectMode('viewer')">
+                     VIEWER<br><small>觀眾</small>
+                </button>
+            </div>
+            <input type="password" class="password-input" id="hostPassword" placeholder="Enter HOST password">
+            <button class="mode-btn host" id="hostConfirm" style="display:none; margin-top:20px;" onclick="confirmHost()">
+                 Confirm
+            </button>
+        </div>
+    </div>
+    
+    <!-- Mode Badge -->
+    <div class="mode-badge hidden" id="modeBadge"></div>
+    
+    <!-- Your existing game HTML continues here... -->
+    
+    <script>
+        // ==========================================
+        // FIREBASE CONFIGURATION
+        // ==========================================
+        // PASTE YOUR FIREBASE CONFIG HERE:
+        const firebaseConfig = {
+          apiKey: "YOUR_API_KEY",
+          authDomain: "YOUR_PROJECT.firebaseapp.com",
+          databaseURL: "YOUR_DATABASE_URL",
+          projectId: "YOUR_PROJECT_ID",
+          storageBucket: "YOUR_STORAGE_BUCKET",
+          messagingSenderId: "YOUR_SENDER_ID",
+          appId: "YOUR_APP_ID"
+        };
+        
+        // Initialize Firebase
+        let database;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            console.log(" Firebase initialized");
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            alert("Firebase not configured. See FIREBASE_SETUP_GUIDE.md");
+        }
+        
+        // ==========================================
+        // GAME MODE SYSTEM
+        // ==========================================
+        const HOST_PASSWORD = "bingo2026"; // Change this!
+        let gameMode = null; // 'host' or 'viewer'
+        
+        function selectMode(mode) {
+            if (mode === 'host') {
+                document.getElementById('hostPassword').style.display = 'block';
+                document.getElementById('hostConfirm').style.display = 'block';
+            } else {
+                gameMode = 'viewer';
+                initializeGame();
+            }
+        }
+        
+        function confirmHost() {
+            const password = document.getElementById('hostPassword').value;
+            if (password === HOST_PASSWORD) {
+                gameMode = 'host';
+                initializeGame();
+            } else {
+                alert(" Incorrect password!");
+            }
+        }
+        
+        function initializeGame() {
+            document.getElementById('modeDialog').classList.add('hidden');
+            const badge = document.getElementById('modeBadge');
+            badge.classList.remove('hidden');
+            badge.classList.add(gameMode);
+            badge.textContent = gameMode === 'host' ? ' HOST MODE' : ' VIEWER MODE';
+            
+            if (gameMode === 'viewer') {
+                // Disable controls for viewers
+                document.querySelectorAll('.host-only').forEach(el => {
+                    el.style.display = 'none';
+                });
+                listenForNumbers();
+            } else {
+                setupHostControls();
+            }
+            
+            generateBingoCard(); // Everyone gets unique card
+        }
+        
+        // ==========================================
+        // REAL-TIME SYNC
+        // ==========================================
+        function listenForNumbers() {
+            database.ref('gameState/currentNumber').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    displayNumber(data.number, data.phrase);
+                }
+            });
+        }
+        
+        function broadcastNumber(number, phrase) {
+            if (gameMode === 'host') {
+                database.ref('gameState/currentNumber').set({
+                    number: number,
+                    phrase: phrase,
+                    timestamp: Date.now()
+                });
+            }
+        }
+        
+        // Your existing game logic continues...
+        // This is a template - full implementation would continue here
+        
+        console.log(" Multiplayer Bingo loaded");
+        console.log(" See FIREBASE_SETUP_GUIDE.md for setup instructions");
+    </script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Voice Diagnostic Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="test-box">
+        <h1>🔊 Cantonese Voice Diagnostic Test</h1>
+        <p>This will test if Google Cloud Text-to-Speech API is working.</p>
+        <button onclick="testVoice()">Test Cantonese Voice (Say "五")</button>
+        <div id="result"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>Quick Fix Steps:</h2>
+        <ol style="line-height: 1.8;">
+            <li><strong>Enable the API:</strong><br>
+                <a href="https://console.cloud.google.com/apis/library/texttospeech.googleapis.com" target="_blank">
+                    Click here to enable Text-to-Speech API
+                </a>
+            </li>
+            <li><strong>Enable Billing:</strong> (Required even for free tier)<br>
+                <a href="https://console.cloud.google.com/billing" target="_blank">
+                    Click here to add billing account
+                </a>
+            </li>
+            <li><strong>Reload this page</strong> and test again</li>
+        </ol>
+    </div>
+
+    <script>
+        const API_KEY = 'AIzaSyBcOB2QRGKRA5Lxa10LJDWxAP2dTZQ2LcQ';
+
+        async function testVoice() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'info';
+            resultDiv.textContent = '⏳ Testing API... Please wait...';
+
+            const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${API_KEY}`;
+            
+            const requestBody = {
+                input: { text: '五' },
+                voice: {
+                    languageCode: 'yue-HK',
+                    name: 'yue-HK-Standard-A',
+                    ssmlGender: 'FEMALE'
+                },
+                audioConfig: {
+                    audioEncoding: 'MP3',
+                    pitch: 0,
+                    speakingRate: 0.9
+                }
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(JSON.stringify(errorData, null, 2));
+                }
+
+                const data = await response.json();
+                const audioContent = data.audioContent;
+                
+                // Play the audio
+                const audio = new Audio(`data:audio/mp3;base64,${audioContent}`);
+                await audio.play();
+
+                resultDiv.className = 'success';
+                resultDiv.textContent = `✅ SUCCESS! Voice is working!\n\nYou should hear "五" (five) in Cantonese.\n\nYour Bingo game will now work with voice!`;
+                
+            } catch (error) {
+                resultDiv.className = 'error';
+                let errorMsg = '❌ API Error:\n\n';
+                
+                try {
+                    const err = JSON.parse(error.message);
+                    if (err.error) {
+                        errorMsg += `Status: ${err.error.status}\n`;
+                        errorMsg += `Message: ${err.error.message}\n\n`;
+                        
+                        if (err.error.status === 'PERMISSION_DENIED') {
+                            errorMsg += '🔧 FIX:\n';
+                            errorMsg += '1. The Text-to-Speech API is not enabled\n';
+                            errorMsg += '2. Click the link above to enable it\n';
+                            errorMsg += '3. Enable billing in your Google Cloud project (required for free tier)\n';
+                            errorMsg += '4. Wait 1-2 minutes and test again';
+                        } else if (err.error.status === 'INVALID_ARGUMENT') {
+                            errorMsg += '🔧 FIX:\n';
+                            errorMsg += '1. Voice "yue-HK" might not be available\n';
+                            errorMsg += '2. Check if billing is enabled\n';
+                            errorMsg += '3. Try using zh-HK instead';
+                        }
+                    }
+                } catch {
+                    errorMsg += error.message;
+                }
+                
+                resultDiv.textContent = errorMsg;
+            }
+        }
+    </script>
+</body>
+</html>
