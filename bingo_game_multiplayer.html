@@ -1402,6 +1402,13 @@
         });
         
         function registerPlayer() {
+            // Unlock speech synthesis on this user gesture (required by browsers)
+            if ('speechSynthesis' in window) {
+                const unlock = new SpeechSynthesisUtterance('');
+                speechSynthesis.speak(unlock);
+                speechSynthesis.cancel();
+            }
+
             const name = document.getElementById('regNameInput').value.trim();
             const errorEl = document.getElementById('regError');
             
