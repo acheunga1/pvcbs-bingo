@@ -1157,6 +1157,92 @@
         .player-row .p-controls button:hover {
             background: #764ba2;
         }
+
+        /* ========================================
+           HOST BACKGROUND MUSIC UPLOAD PANEL
+           ======================================== */
+        .host-music-upload {
+            margin-top: 25px;
+            padding: 20px 25px;
+            background: linear-gradient(135deg, #f3e5f5 0%, #e8eaf6 100%);
+            border-radius: 15px;
+            display: none; /* shown only in host mode via JS */
+        }
+        .host-music-upload h3 {
+            margin-bottom: 14px;
+            color: #333;
+            font-size: 1.1em;
+        }
+        .host-music-upload .upload-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .host-music-upload .upload-label {
+            display: inline-block;
+            padding: 9px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95em;
+            transition: all 0.2s;
+        }
+        .host-music-upload .upload-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        .host-music-upload #hostMusicFileInput {
+            display: none;
+        }
+        .host-music-upload .music-filename {
+            font-size: 0.9em;
+            color: #555;
+            font-style: italic;
+        }
+        .host-music-upload .hm-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .host-music-upload .hm-btn {
+            padding: 9px 20px;
+            font-size: 0.95em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: white;
+            transition: all 0.2s;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            text-transform: none;
+        }
+        .host-music-upload .hm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 14px rgba(0,0,0,0.3);
+        }
+        .host-music-upload .hm-btn.play  { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #222; }
+        .host-music-upload .hm-btn.pause { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .host-music-upload .hm-btn.stop  { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .host-music-upload .hm-vol-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .host-music-upload .hm-vol-row label {
+            font-size: 0.9em;
+            color: #444;
+            white-space: nowrap;
+        }
+        .host-music-upload #hostMusicVolume {
+            width: 100px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -1164,13 +1250,13 @@
     <div class="mode-dialog" id="modeDialog">
         <div class="mode-content">
             <h2> Select Mode</h2>
-            <p>Are you the HOST or a VIEWER?<br>你係主持人定觀眾？</p>
+            <p>Are you the HOST or a PLAYER?<br>你係主持人定玩家？</p>
             <div class="mode-buttons">
                 <button class="mode-btn host" onclick="selectMode('host')">
                      HOST<br><small>主持人</small>
                 </button>
-                <button class="mode-btn viewer" onclick="selectMode('viewer')">
-                     VIEWER<br><small>觀眾</small>
+                <button class="mode-btn viewer" onclick="selectMode('player')">
+                     PLAYER<br><small>玩家</small>
                 </button>
             </div>
             <input type="password" class="password-input" id="hostPassword" placeholder="Enter HOST password 輸入密碼">
@@ -1295,6 +1381,26 @@
                 <div id="claimsList"><p style="color:#999;">No claims yet 暫時冇申請</p></div>
             </div>
             
+            <!-- HOST Background Music Upload -->
+            <div class="host-music-upload" id="hostMusicUpload">
+                <h3>🎵 Host Background Music 主持背景音樂</h3>
+                <div class="upload-row">
+                    <label class="upload-label" for="hostMusicFileInput">📂 Upload MP3 上載音樂</label>
+                    <input type="file" id="hostMusicFileInput" accept="audio/*">
+                    <span class="music-filename" id="hostMusicFilename">No file selected 未選擇檔案</span>
+                </div>
+                <div class="hm-controls">
+                    <button class="hm-btn play"  id="hmPlayBtn"  onclick="hmPlay()">▶ Play 播放</button>
+                    <button class="hm-btn pause" id="hmPauseBtn" onclick="hmPause()">⏸ Pause 暫停</button>
+                    <button class="hm-btn stop"  id="hmStopBtn"  onclick="hmStop()">⏹ Stop 停止</button>
+                </div>
+                <div class="hm-vol-row">
+                    <label for="hostMusicVolume">🔊 Volume 音量:</label>
+                    <input type="range" id="hostMusicVolume" min="0" max="100" value="50">
+                    <span id="hostMusicVolLabel">50%</span>
+                </div>
+            </div>
+
             <!-- HOST Player Management -->
             <div class="player-management" id="playerManagement">
                 <h3>👥 Player Management 玩家管理</h3>
@@ -1385,8 +1491,8 @@
         // GAME MODE SYSTEM
         // ==========================================
         
-        const HOST_PASSWORD = "bingo2026"; // Change this for security!
-        let gameMode = null; // 'host' or 'viewer'
+        const HOST_PASSWORD = "1234"; // Change this for security!
+        let gameMode = null; // 'host' or 'player'
         let currentPlayerId = null;
         let currentPlayerName = null;
         let playerCardsUsed = 0;
@@ -1558,7 +1664,7 @@
         // ==========================================
         
         function initHostPlayerManagement() {
-            if (gameMode !== 'host' || !isFirebaseConfigured) return;
+            if (gameMode !== 'host' || !isFirebaseConfigured) return; // only host
             
             document.getElementById('playerManagement').classList.add('show');
             
@@ -1664,8 +1770,8 @@
             if (mode === 'host') {
                 document.getElementById('hostPassword').style.display = 'block';
                 document.getElementById('hostConfirm').style.display = 'block';
-            } else if (mode === 'viewer') {
-                gameMode = 'viewer';
+            } else if (mode === 'player') {
+                gameMode = 'player';
                 initializeGameMode();
             }
         }
@@ -1688,10 +1794,11 @@
             // Show and configure mode badge
             const badge = document.getElementById('modeBadge');
             badge.classList.add('show');
-            badge.classList.add(gameMode);
-            badge.textContent = gameMode === 'host' ? ' HOST MODE' : ' VIEWER MODE';
-            
-            if (gameMode === 'viewer') {
+            // Add CSS styling class ('host' or 'viewer' for existing CSS gradient rules)
+            badge.classList.add(gameMode === 'host' ? 'host' : 'viewer');
+            badge.textContent = gameMode === 'host' ? ' HOST MODE' : ' PLAYER MODE';
+
+            if (gameMode === 'player') {
                 // Add viewer-mode class for 9:16 mobile layout
                 document.body.classList.add('viewer-mode');
                 
@@ -1711,11 +1818,11 @@
                 } else {
                     alert("Firebase未配置！睇唔到HOST嘅號碼。");
                 }
-                
+
                 // Show player registration dialog (game inits after registration)
                 showPlayerRegistration();
-                
-                console.log(" VIEWER mode activated - awaiting registration");
+
+                console.log(" PLAYER mode activated - awaiting registration");
             } else {
                 // HOST mode
                 document.body.classList.add('host-mode');
@@ -1740,7 +1847,10 @@
                 calledNumbers = [];
                 updateStats();
                 generateNumberBoard(); // HOST needs to see 1-75 grid to track called numbers
-                
+
+                // Show host music upload panel
+                initHostMusicUpload();
+
                 console.log("✅ HOST mode activated - no Bingo card generated");
             }
             
@@ -1941,33 +2051,31 @@
         // ==========================================
         
         function showPlayerNameInput() {
-            document.getElementById('playerNameInput').classList.add('show');
-            document.getElementById('submitClaimBtn').style.display = 'block';
+            // Player name is already known from registration — submit claim immediately
+            submitBingoClaim();
         }
-        
+
         function submitBingoClaim() {
-            const playerName = document.getElementById('playerNameInput').value.trim();
-            
+            const playerName = currentPlayerName;
+
             if (!playerName) {
                 alert("請輸入你嘅名！Please enter your name!");
                 return;
             }
-            
+
             if (!isFirebaseConfigured) {
                 alert("Firebase not configured. Cannot submit claim.");
                 return;
             }
-            
+
             const claimId = Date.now();
             database.ref(`bingoClaims/${claimId}`).set({
                 playerName: playerName,
                 timestamp: claimId,
                 verified: false
             }).then(() => {
-                alert(" 已提交申請！Claim submitted! 請等主持人驗證 Please wait for verification.");
+                alert("🎉 已提交申請！Claim submitted! 請等主持人驗證 Please wait for verification.");
                 document.getElementById('claimBingoBtn').style.display = 'none';
-                document.getElementById('playerNameInput').style.display = 'none';
-                document.getElementById('submitClaimBtn').style.display = 'none';
             }).catch(error => {
                 console.error("Error submitting claim:", error);
                 alert("提交失敗 Submission failed. Please try again.");
@@ -2397,15 +2505,13 @@
             updateStats();
             checkWin();
             
-            // Broadcast to all viewers if HOST
+            // Broadcast to all players if HOST
             if (gameMode === 'host') {
                 broadcastNumber(number, phrase);
             }
-            
-            // Only VIEWER hears voice - HOST is silent
-            if (gameMode === 'viewer') {
-                speakCantonese(number, phrase);
-            }
+
+            // Announce number in Cantonese for both HOST and PLAYER
+            speakCantonese(number, phrase);
         }
 
         // Update statistics
@@ -2470,23 +2576,40 @@
             }
         }
 
-        // Play sound
+        // Play generic sound (legacy)
         function playSound() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.1);
+            playDingSound();
+        }
+
+        // Pleasant ding sound for host number draw (Web Audio API, no external files)
+        function playDingSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Create two oscillators for a rich ding chord
+                function makeTone(freq, startTime, duration, gain) {
+                    const osc = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    osc.connect(g);
+                    g.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, startTime);
+                    g.gain.setValueAtTime(0, startTime);
+                    g.gain.linearRampToValueAtTime(gain, startTime + 0.01);
+                    g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                    osc.start(startTime);
+                    osc.stop(startTime + duration);
+                }
+
+                const now = audioCtx.currentTime;
+                // First ding: high note
+                makeTone(1047, now, 0.6, 0.35);        // C6
+                makeTone(1319, now + 0.01, 0.5, 0.2);  // E6
+                // Second ding (lower, resonant)
+                makeTone(784, now + 0.08, 0.7, 0.18);  // G5
+            } catch (e) {
+                console.warn('Ding sound error:', e);
+            }
         }
 
         // Dedup guard — prevent the same number from being spoken more than once
@@ -2601,10 +2724,10 @@
             calledNumbers = [];
             updateStats();
             
-            if (gameMode === 'viewer') {
+            if (gameMode === 'player') {
                 generateBingoCard();
             }
-            
+
             // Clear number board highlights
             document.querySelectorAll('.number-ball.called').forEach(ball => {
                 ball.classList.remove('called');
@@ -2615,7 +2738,7 @@
         });
 
         document.getElementById('newCardBtn').addEventListener('click', () => {
-            if (gameMode === 'viewer' && currentPlayerId) {
+            if (gameMode === 'player' && currentPlayerId) {
                 requestNewCard();
             } else {
                 generateBingoCard();
@@ -2689,9 +2812,68 @@
             }
         }
 
+        // ==========================================
+        // HOST BACKGROUND MUSIC UPLOAD CONTROLS
+        // ==========================================
+
+        let hostMusicAudio = null; // Audio element for uploaded track
+
+        function initHostMusicUpload() {
+            const panel = document.getElementById('hostMusicUpload');
+            if (panel) panel.style.display = 'block';
+
+            const fileInput = document.getElementById('hostMusicFileInput');
+            const volSlider = document.getElementById('hostMusicVolume');
+            const volLabel  = document.getElementById('hostMusicVolLabel');
+
+            fileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (!file) return;
+
+                document.getElementById('hostMusicFilename').textContent = file.name;
+
+                // Revoke previous object URL to free memory
+                if (hostMusicAudio) {
+                    hostMusicAudio.pause();
+                    if (hostMusicAudio._objectUrl) URL.revokeObjectURL(hostMusicAudio._objectUrl);
+                }
+
+                const url = URL.createObjectURL(file);
+                hostMusicAudio = new Audio(url);
+                hostMusicAudio._objectUrl = url;
+                hostMusicAudio.loop = true;
+                hostMusicAudio.volume = volSlider.value / 100;
+                console.log('✅ Host music loaded:', file.name);
+            });
+
+            volSlider.addEventListener('input', function() {
+                volLabel.textContent = this.value + '%';
+                if (hostMusicAudio) hostMusicAudio.volume = this.value / 100;
+            });
+        }
+
+        function hmPlay() {
+            if (!hostMusicAudio) {
+                alert('Please upload an audio file first!\n請先上載音樂檔案！');
+                return;
+            }
+            hostMusicAudio.play().catch(err => console.warn('Host music play error:', err));
+        }
+
+        function hmPause() {
+            if (hostMusicAudio) hostMusicAudio.pause();
+        }
+
+        function hmStop() {
+            if (hostMusicAudio) {
+                hostMusicAudio.pause();
+                hostMusicAudio.currentTime = 0;
+            }
+        }
+
         // Initialize on load
         // NOTE: initGame() and generateBingoCard() moved to initializeGameMode()
-        // They should only run for VIEWER mode, not HOST
+        // They should only run for PLAYER mode, not HOST
         updateVoiceStatus();
     </script>
     
