@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幸運抽獎 Lucky Draw — 商評馬年新春團拜晚宴</title>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- SheetJS for Excel upload -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background: linear-gradient(135deg, #1a0533 0%, #0d0221 60%, #000 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* ── MODE DIALOG ── */
+        .mode-dialog {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.97);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .mode-dialog.hidden { display: none; }
+        .mode-content {
+            background: white;
+            padding: 50px 60px;
+            border-radius: 28px;
+            text-align: center;
+            max-width: 560px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            position: relative;
+        }
+        .mode-content h2 {
+            font-size: 2.4em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .mode-content p { font-size: 1.1em; color: #666; margin-bottom: 35px; }
+        .mode-buttons { display: flex; gap: 25px; justify-content: center; flex-wrap: wrap; }
+        .mode-btn {
+            padding: 25px 45px;
+            font-size: 1.6em;
+            font-weight: bold;
+            border: none;
+            border-radius: 18px;
+            cursor: pointer;
+            color: white;
+            min-width: 180px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .mode-btn:hover { transform: translateY(-4px); box-shadow: 0 14px 35px rgba(0,0,0,0.4); }
+        .mode-btn.host { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .mode-btn.viewer { background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); color: #333; }
+        .pw-input {
+            margin-top: 25px;
+            padding: 16px;
+            font-size: 1.2em;
+            border: 3px solid #FFD700;
+            border-radius: 12px;
+            width: 100%;
+            text-align: center;
+            display: none;
+            outline: none;
+        }
+        .pw-confirm {
+            display: none;
+            margin-top: 14px;
+            width: 100%;
+            padding: 16px;
+            font-size: 1.2em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .back-link {
+            position: absolute;
+            top: 14px;
+            left: 18px;
+            font-size: 0.8em;
+            color: #aaa;
+            text-decoration: none;
+        }
+        .back-link:hover { color: #555; }
+
+        /* ── SHARED LAYOUT ── */
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .page-header {
+            text-align: center;
+            padding: 30px 0 25px;
+        }
+        .page-header img {
+            height: 80px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 12px rgba(255,255,255,0.2));
+            margin-bottom: 10px;
+        }
+        .page-title {
+            font-family: 'Luckiest Guy', 'Impact', sans-serif;
+            font-size: clamp(2em, 6vw, 3.2em);
+            color: #FFD700;
+            letter-spacing: 4px;
+            text-shadow: 0 0 40px rgba(255,215,0,0.6);
+            animation: titlePulse 3s ease-in-out infinite;
+        }
+        .page-subtitle { color: rgba(255,255,255,0.5); font-size: 0.95em; letter-spacing: 3px; margin-top: 6px; }
+        @keyframes titlePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
+
+        /* ── HOST PANEL ── */
+        .host-panel {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 60px;
+        }
+        .host-panel.show { display: flex; }
+
+        .card {
+            background: rgba(255,255,255,0.96);
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+        .card h3 {
+            font-size: 1.1em;
+            color: #B8860B;
+            margin-bottom: 18px;
+            font-weight: bold;
+        }
+
+        /* Upload row */
+        .upload-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+        .upload-label {
+            display: inline-block;
+            padding: 10px 22px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #333;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95em;
+            transition: transform 0.2s;
+        }
+        .upload-label:hover { transform: translateY(-2px); }
+        .preset-btn {
+            padding: 10px 22px;
+            background: linear-gradient(135deg, #43e97b, #38f9d7);
+            color: #222;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        #ldFilename { color: #888; font-style: italic; font-size: 0.9em; }
+        .prize-table-wrap { max-height: 260px; overflow-y: auto; margin-top: 10px; display: none; }
+        .prize-table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        .prize-table th { background: #FFD700; color: #333; padding: 7px 10px; text-align: left; position: sticky; top: 0; }
+        .prize-table td { padding: 6px 10px; border-bottom: 1px solid rgba(0,0,0,0.07); }
+        .prize-table tr.ld-current { background: rgba(255,215,0,0.35); font-weight: bold; }
+        .prize-table tr.ld-done { background: rgba(67,233,123,0.12); color: #999; }
+
+        /* Seat range */
+        .range-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .range-row label { font-weight: bold; color: #555; }
+        .range-row input[type="number"] {
+            width: 80px; padding: 9px 12px; font-size: 1.1em;
+            border: 2px solid #FFD700; border-radius: 10px; text-align: center; outline: none;
+        }
+        .set-btn {
+            padding: 10px 22px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #333; border: none; border-radius: 10px;
+            cursor: pointer; font-weight: bold;
+        }
+        #rangeStatus { color: #2e7d32; font-weight: bold; font-size: 0.9em; }
+
+        /* Current prize card */
+        .prize-card {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border-radius: 15px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(255,165,0,0.4);
+        }
+        .prize-card-inner { display: flex; align-items: center; gap: 16px; }
+        .prize-card-logo-wrap {
+            background: white;
+            border-radius: 10px;
+            padding: 8px 10px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .prize-card-logo { height: 58px; width: auto; object-fit: contain; display: block; }
+        .prize-card-info { flex: 1; text-align: left; }
+        .prize-card .pn { font-size: 0.95em; color: rgba(0,0,0,0.5); margin-bottom: 4px; }
+        .prize-card .pname { font-size: 1.9em; font-weight: bold; color: #333; margin-bottom: 6px; }
+        .prize-card .psponsor { font-size: 1em; color: rgba(0,0,0,0.6); margin-bottom: 4px; }
+        .prize-card .pqty { font-size: 0.85em; color: rgba(0,0,0,0.45); }
+
+        /* Winner flash */
+        .winner-flash {
+            background: linear-gradient(135deg, #43e97b, #38f9d7);
+            border-radius: 15px; padding: 22px; text-align: center;
+            display: none; animation: bounceIn 0.7s;
+        }
+        .winner-flash.show { display: block; }
+        @keyframes bounceIn { 0%{transform:scale(0)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
+        .winner-flash .wlabel { font-size: 1em; color: rgba(255,255,255,0.85); margin-bottom: 6px; }
+        .winner-seat { font-size: 4.5em; font-weight: bold; color: white; text-shadow: 3px 3px 8px rgba(0,0,0,0.25); line-height: 1; }
+        .all-winners { background: rgba(67,233,123,0.15); border-radius: 10px; padding: 14px; text-align: center; display: none; border: 1px solid rgba(67,233,123,0.4); }
+        .all-winners .aw-label { font-weight: bold; color: #2e7d32; margin-bottom: 6px; }
+        .all-winners .aw-seats { font-size: 1.3em; font-weight: bold; color: #1b5e20; }
+
+        /* Spin drum */
+        .spin-drum {
+            background: linear-gradient(135deg, #1a0533, #0d0221);
+            border-radius: 16px;
+            padding: 24px 20px 18px;
+            margin-bottom: 16px;
+            text-align: center;
+            border: 3px solid rgba(255,215,0,0.5);
+            box-shadow: 0 0 30px rgba(255,215,0,0.15) inset;
+            display: none;
+        }
+        .spin-drum.active { display: block; }
+        .spin-drum-label { color: rgba(255,215,0,0.55); font-size: 0.85em; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
+        .spin-number {
+            font-family: 'Luckiest Guy', 'Impact', sans-serif;
+            font-size: clamp(3.5em, 12vw, 6em);
+            color: #FFD700;
+            text-shadow: 0 0 40px rgba(255,215,0,0.9), 0 0 80px rgba(255,215,0,0.4);
+            line-height: 1;
+            display: block;
+            min-height: 1.15em;
+            transition: color 0.3s;
+        }
+        .spin-number.spinning { animation: spinFlicker 0.09s steps(1) infinite; }
+        .spin-number.landing { color: #43e97b; text-shadow: 0 0 50px rgba(67,233,123,0.9), 0 0 100px rgba(67,233,123,0.5); animation: landPop 0.5s ease-out; }
+        @keyframes spinFlicker {
+            0%   { transform: translateY(-6px) scaleY(0.9); }
+            50%  { transform: translateY(6px)  scaleY(1.1); }
+            100% { transform: translateY(-6px) scaleY(0.9); }
+        }
+        @keyframes landPop {
+            0%   { transform: scale(0.7); }
+            55%  { transform: scale(1.15); }
+            80%  { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+
+        /* Buttons */
+        .draw-btn {
+            width: 100%; padding: 20px; font-size: 1.6em; font-weight: bold;
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            color: #333; border: none; border-radius: 15px; cursor: pointer;
+            box-shadow: 0 5px 22px rgba(255,140,0,0.45);
+            animation: pulse 2s infinite;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .draw-btn:disabled { opacity: 0.4; cursor: not-allowed; animation: none; }
+        .draw-btn:not(:disabled):hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(255,140,0,0.55); }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+        .next-btn {
+            display: none; width: 100%; padding: 15px; font-size: 1.2em; font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border: none; border-radius: 14px; cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+
+        /* Manual inputs */
+        .manual-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .manual-row input {
+            flex: 1; padding: 10px 14px; font-size: 1em;
+            border: 2px solid #FFD700; border-radius: 10px; min-width: 140px; outline: none;
+            font-family: inherit;
+        }
+        .manual-row .mbtn {
+            padding: 10px 18px; font-weight: bold; font-size: 0.9em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border: none; border-radius: 10px; cursor: pointer;
+            white-space: nowrap;
+        }
+
+        /* History */
+        .history-list { display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            background: white; border-radius: 10px; padding: 10px 14px;
+            border-left: 4px solid #FFD700;
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 0.9em;
+        }
+        .history-item .hi-num { color: #B8860B; font-weight: bold; min-width: 50px; }
+        .history-item .hi-name { flex: 1; }
+        .history-item .hi-sponsor { color: #888; font-size: 0.88em; }
+        .history-item .hi-win { color: #2e7d32; font-weight: bold; }
+
+        /* ── VIEWER MODE ── */
+        .vp-branding {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.75;
+        }
+        .vp-branding img { height: 156px; }
+        .vp-branding-text {
+            color: #fff;
+            font-size: 1em;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+        .vp-branding-contact {
+            color: #fff;
+            font-size: 0.82em;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .viewer-panel {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding-bottom: 60px;
+            gap: 0;
+        }
+        .viewer-panel.show { display: flex; }
+
+        .vp-waiting {
+            color: rgba(255,255,255,0.45);
+            font-size: 1.1em;
+            letter-spacing: 2px;
+            margin-top: 60px;
+            text-align: center;
+        }
+
+        /* Big prize display */
+        .vp-prize-box {
+            width: 100%;
+            max-width: 780px;
+            background: linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,140,0,0.1) 100%);
+            border: 1px solid rgba(255,215,0,0.35);
+            border-radius: 22px;
+            padding: 32px 28px;
+            margin-top: 20px;
+            backdrop-filter: blur(8px);
+            display: none;
+        }
+        .vp-prize-box.show { display: block; animation: fadeUp 0.5s ease-out; }
+        .vp-box-inner { display: flex; align-items: center; gap: 24px; }
+        .vp-logo-col {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .vp-logo-col img { height: 130px; width: auto; object-fit: contain; filter: drop-shadow(0 3px 14px rgba(255,215,0,0.5)); }
+        .vp-info-col { flex: 1; text-align: center; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+        .vp-prize-num { color: rgba(255,215,0,0.6); font-size: 1em; letter-spacing: 2px; margin-bottom: 8px; }
+        .vp-prize-name {
+            font-size: clamp(1.6em, 5vw, 2.6em);
+            color: #FFD700;
+            font-weight: bold;
+            text-shadow: 0 0 30px rgba(255,215,0,0.5);
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        .vp-sponsor { font-size: 1.05em; color: rgba(255,255,255,0.65); margin-bottom: 28px; }
+
+        .vp-winner-label { font-size: 0.9em; color: rgba(255,255,255,0.45); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; }
+        .vp-winner-seat {
+            font-family: 'Luckiest Guy', 'Impact', sans-serif;
+            font-size: clamp(4em, 18vw, 8em);
+            color: #43e97b;
+            font-weight: 900;
+            text-shadow: 0 0 50px rgba(67,233,123,0.7), 0 0 100px rgba(67,233,123,0.3);
+            line-height: 1;
+            display: block;
+            animation: seatPop 0.5s ease-out;
+        }
+        @keyframes seatPop { 0%{transform:scale(0.3) rotate(-10deg);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+
+        /* Viewer history */
+        .vp-history {
+            width: 100%;
+            max-width: 680px;
+            margin-top: 30px;
+        }
+        .vp-history h4 { color: rgba(255,215,0,0.7); font-size: 0.9em; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+        .vp-history-item {
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            border: 1px solid rgba(255,215,0,0.1);
+        }
+        .vp-history-item .vh-num { color: #FFD700; font-weight: bold; min-width: 45px; font-size: 0.95em; }
+        .vp-history-item .vh-name { flex: 1; color: rgba(255,255,255,0.8); font-size: 0.95em; }
+        .vp-history-item .vh-sponsor { color: rgba(255,255,255,0.4); font-size: 0.85em; }
+        .vp-history-item .vh-win { color: #43e97b; font-weight: bold; font-size: 1em; }
+
+        /* Back / change mode button */
+        #changeBtn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 500;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 25px;
+            font-size: 0.9em;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            display: none;
+            transition: background 0.2s;
+            font-family: inherit;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        #changeBtn:hover { background: rgba(255,255,255,0.28); }
+        #changeBtn.show { display: block; }
+
+        /* Audio upload rows */
+        .audio-upload-row {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            background: rgba(0,0,0,0.04); border-radius: 10px; padding: 10px 12px;
+        }
+        .au-label { font-weight: bold; color: #555; font-size: 0.92em; min-width: 130px; }
+        .au-btn {
+            padding: 7px 16px; background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #333; border-radius: 8px; cursor: pointer; font-weight: bold;
+            font-size: 0.88em; white-space: nowrap;
+        }
+        .au-btn input { display: none; }
+        .au-btn:hover { opacity: 0.85; }
+        .au-status { flex: 1; font-size: 0.82em; color: #2e7d32; font-style: italic; min-width: 80px; }
+        .au-play {
+            width: 30px; height: 30px; border-radius: 50%; border: 2px solid #FFD700;
+            background: transparent; color: #B8860B; cursor: pointer; font-size: 0.9em;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .au-play:hover { background: #FFD700; color: #333; }
+        .au-mute {
+            width: 32px; height: 30px; border-radius: 8px; border: 2px solid rgba(255,215,0,0.5);
+            background: transparent; color: #FFD700; cursor: pointer; font-size: 0.88em;
+            display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .au-mute.muted { color: #ff4444; border-color: #ff4444; }
+        .au-mute:hover { background: rgba(255,215,0,0.15); }
+
+        /* Music bar */
+        #musicBar {
+            display: none;
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            z-index: 600;
+            background: rgba(20,10,40,0.95);
+            border: 1px solid rgba(255,215,0,0.5);
+            border-radius: 12px;
+            padding: 10px 16px;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(10px);
+        }
+        #musicBar.show { display: flex; }
+        #musicBar label { color: #FFD700; font-size: 0.82em; white-space: nowrap; }
+        #volSlider { width: 130px; accent-color: #FFD700; cursor: pointer; }
+        #volPct { color: #FFD700; font-size: 0.82em; min-width: 32px; }
+        #muteBtn {
+            padding: 5px 12px; border: 1px solid rgba(255,215,0,0.5);
+            background: transparent; color: #FFD700; border-radius: 8px;
+            cursor: pointer; font-size: 0.82em; font-family: inherit; white-space: nowrap;
+        }
+        #muteBtn:hover { background: rgba(255,215,0,0.2); }
+
+        /* Mode badge */
+        .mode-badge {
+            position: fixed; top: 16px; right: 16px;
+            padding: 10px 24px; border-radius: 25px;
+            font-size: 1em; font-weight: bold; z-index: 100;
+            display: none;
+        }
+        .mode-badge.show { display: block; }
+        .mode-badge.host { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+        .mode-badge.viewer { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #333; }
+
+        @media (max-width: 600px) {
+            .mode-content { padding: 35px 25px; }
+            .card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mode Dialog -->
+    <div class="mode-dialog" id="modeDialog">
+        <div class="mode-content">
+            <a class="back-link" href="index.html">← 返回 Back</a>
+            <h2>🎁 幸運抽獎</h2>
+            <p>選擇模式 / Select Mode</p>
+            <div class="mode-buttons">
+                <button class="mode-btn host" onclick="selectMode('host')">🎛 HOST<br><small>主持人</small></button>
+                <button class="mode-btn viewer" onclick="selectMode('viewer')">👁 VIEW<br><small>觀看</small></button>
+            </div>
+            <input type="password" class="pw-input" id="hostPw" placeholder="主持密碼 Host Password">
+            <button class="pw-confirm" id="pwConfirm" onclick="confirmHost()">✅ Confirm 確認</button>
+        </div>
+    </div>
+
+    <!-- Mode badge -->
+    <div class="mode-badge" id="modeBadge"></div>
+
+    <!-- Change mode / back button -->
+    <button id="changeBtn" onclick="location.reload()">↩ 重選模式 Change Mode</button>
+
+    <!-- Music bar (always visible after mode select) -->
+    <div id="musicBar">
+        <label>🎵 BGM</label>
+        <input type="range" id="volSlider" min="0" max="100" step="5" value="45" oninput="setBgmVolume(this.value)">
+        <span id="volPct">45%</span>
+        <button id="muteBtn" onclick="toggleMute()">🔇 Mute</button>
+    </div>
+
+    <div class="container">
+        <!-- Header (both modes) -->
+        <div class="page-header">
+            <img src="assets/logos/PVCBSLOGO.png" alt="PVCBS" onerror="this.style.display='none'">
+            <div class="page-title">幸運抽獎 Lucky Draw</div>
+            <div class="page-subtitle">商評馬年新春團拜晚宴 · Spring Dinner 2026</div>
+        </div>
+
+        <!-- ══ HOST PANEL ══ -->
+        <div class="host-panel" id="hostPanel">
+
+            <!-- 1. Load Prize List -->
+            <div class="card">
+                <h3>📋 Step 1 — 載入獎品清單 Load Prize List</h3>
+                <div class="upload-row">
+                    <button class="preset-btn" onclick="ldLoadPreset()">⚡ Load mar 11 Data</button>
+                    <span style="color:#aaa; font-size:0.9em;">— 或 or —</span>
+                    <label class="upload-label" for="ldExcelInput">📊 Upload New Excel</label>
+                    <input type="file" id="ldExcelInput" accept=".xlsx,.xls,.csv" style="display:none;">
+                    <span id="ldFilename">未選擇 No file</span>
+                </div>
+                <div class="prize-table-wrap" id="prizeTableWrap">
+                    <table class="prize-table" id="prizeTable"></table>
+                </div>
+            </div>
+
+            <!-- 2. Seat Range -->
+            <div class="card">
+                <h3>🪑 Step 2 — 設定座位範圍 Set Seat Range</h3>
+                <div class="range-row">
+                    <label>座位號碼 Seat #:</label>
+                    <input type="number" id="seatMin" value="1" min="1">
+                    <span style="color:#888; font-size:1.2em;">–</span>
+                    <input type="number" id="seatMax" value="99" min="1">
+                    <button class="set-btn" onclick="ldSetRange()">✅ Set 設定</button>
+                    <span id="rangeStatus"></span>
+                </div>
+            </div>
+
+            <!-- 3. Draw -->
+            <div class="card">
+                <h3>🎰 Step 3 — 抽獎 Draw</h3>
+
+                <div id="currentPrizeCard" class="prize-card" style="display:none; margin-bottom:16px;">
+                    <div class="pn" id="prizeNum">—</div>
+                    <div class="pname" id="prizeName">—</div>
+                    <div class="psponsor" id="prizeSponsor">—</div>
+                    <div class="pqty" id="prizeQty">—</div>
+                </div>
+                <!-- draw-method lock notice -->
+                <div id="lockNotice" style="display:none; margin-bottom:10px; padding:8px 14px; background:rgba(245,87,108,0.12); border:1px solid rgba(245,87,108,0.4); border-radius:10px; font-size:0.88em; color:#c0392b; text-align:center;"></div>
+
+                <div class="winner-flash" id="winnerFlash">
+                    <div class="wlabel">🏆 得獎座位 Winner Seat</div>
+                    <div class="winner-seat" id="winnerSeat">--</div>
+                </div>
+
+                <div class="all-winners" id="allWinners" style="margin-bottom:12px;">
+                    <div class="aw-label">所有得獎座位 All Winners:</div>
+                    <div class="aw-seats" id="allWinnersText"></div>
+                </div>
+
+                <div class="spin-drum" id="spinDrum">
+                    <div class="spin-drum-label">🎰 抽緊號碼 Drawing...</div>
+                    <span class="spin-number" id="spinNumber">?</span>
+                </div>
+
+                <button class="draw-btn" id="drawBtn" disabled onclick="ldDraw()">🎰 抽獎 DRAW!</button>
+                <button class="next-btn" id="nextBtn" onclick="ldNextPrize()" style="margin-top:12px;">➡ 下一個獎項 Next Prize</button>
+            </div>
+
+            <!-- 4. Manual Override -->
+            <div class="card">
+                <h3>✏️ 手動輸入 Manual Override</h3>
+                <div class="manual-row">
+                    <input type="number" id="manualWinner" placeholder="座位號碼 Seat #" min="1">
+                    <button class="mbtn" id="manualConfirmBtn" onclick="ldManualWin()">✅ 確認得獎 Confirm Winner</button>
+                </div>
+                <div class="manual-row">
+                    <input type="text" id="manualPrizeName" placeholder="獎品名稱 Prize name（空白格用）">
+                    <input type="text" id="manualSponsor" placeholder="贊助人 Sponsor（空白格用）">
+                    <button class="mbtn" onclick="ldUpdatePrize()">💾 Update</button>
+                </div>
+            </div>
+
+            <!-- 5. Audio Upload -->
+            <div class="card">
+                <h3>🎵 Step 4 — 音效上傳 Audio Upload <span style="font-size:0.8em;color:#aaa;font-weight:normal;">(optional)</span></h3>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div class="audio-upload-row">
+                        <span class="au-label">🎶 BGM</span>
+                        <label class="au-btn"><input type="file" accept="audio/*" onchange="loadAudio('bgm',this)"> 選擇 Choose</label>
+                        <span class="au-status" id="auBgmStatus">—</span>
+                        <button class="au-play" onclick="previewAudio('bgm')" title="試聽 Preview">▶</button>
+                        <button class="au-mute" id="muteBtnBgm" onclick="toggleTrackMute('bgm')" title="Mute BGM">🔊</button>
+                    </div>
+                    <div class="audio-upload-row">
+                        <span class="au-label">🥁 Drum Roll</span>
+                        <label class="au-btn"><input type="file" accept="audio/*" onchange="loadAudio('drumroll',this)"> 選擇 Choose</label>
+                        <span class="au-status" id="auDrumStatus">—</span>
+                        <button class="au-play" onclick="previewAudio('drumroll')" title="試聽 Preview">▶</button>
+                        <button class="au-mute" id="muteBtnDrumroll" onclick="toggleTrackMute('drumroll')" title="Mute Drum">🔊</button>
+                    </div>
+                    <div class="audio-upload-row">
+                        <span class="au-label">🎺 Fanfare</span>
+                        <label class="au-btn"><input type="file" accept="audio/*" onchange="loadAudio('fanfare',this)"> 選擇 Choose</label>
+                        <span class="au-status" id="auFanfareStatus">—</span>
+                        <button class="au-play" onclick="previewAudio('fanfare')" title="試聽 Preview">▶</button>
+                        <button class="au-mute" id="muteBtnFanfare" onclick="toggleTrackMute('fanfare')" title="Mute Fanfare">🔊</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. History -->
+            <div class="card" id="historyCard" style="display:none;">
+                <h3>📋 抽獎記錄 Draw History</h3>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+
+        <!-- ══ VIEWER PANEL ══ -->
+        <div class="viewer-panel" id="viewerPanel">
+            <div class="vp-waiting" id="vpWaiting">⏳ 等緊主持人開始抽獎...<br>Waiting for host to start the draw...</div>
+
+            <div class="vp-prize-box" id="vpPrizeBox">
+                <div class="vp-box-inner">
+                    <div class="vp-logo-col">
+                        <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" onerror="this.parentElement.style.display='none'">
+                    </div>
+                    <div class="vp-info-col">
+                        <div class="vp-prize-num" id="vpPrizeNum"></div>
+                        <div class="vp-prize-name" id="vpPrizeName">—</div>
+                        <div class="vp-sponsor" id="vpSponsor"></div>
+                        <div class="vp-winner-label">🏆 得獎座位號碼 WINNER SEAT</div>
+                        <span class="vp-winner-seat" id="vpWinnerSeat">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vp-history" id="vpHistory" style="display:none;">
+                <h4>📋 已抽記錄 Draw History</h4>
+                <div id="vpHistoryList"></div>
+            </div>
+
+            <div class="vp-branding">
+                <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" onerror="this.style.display='none'">
+                <div class="vp-branding-text">為商會專屬定制線上遊戲</div>
+                <div class="vp-branding-contact">查詢: info@alphasighthk.com</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ══════════════════════════════════════════
+    // FIREBASE
+    // ══════════════════════════════════════════
+    const firebaseConfig = {
+        apiKey: "AIzaSyBHIbbJvLvhdK2LHTAvgCCE4DqL1jKxnt4",
+        authDomain: "bingo-game-alphasighthk.firebaseapp.com",
+        databaseURL: "https://bingo-game-alphasighthk-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "bingo-game-alphasighthk",
+        storageBucket: "bingo-game-alphasighthk.firebasestorage.app",
+        messagingSenderId: "408921101685",
+        appId: "1:408921101685:web:b337a2141e64452e8d2f3c"
+    };
+    let db, fbReady = false;
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        fbReady = true;
+    } catch(e) { console.error('Firebase init error:', e); }
+
+    const HOST_PW = "1234";
+    let gameMode = null;
+
+    // ══════════════════════════════════════════
+    // MODE SELECTION
+    // ══════════════════════════════════════════
+    function selectMode(mode) {
+        if (mode === 'host') {
+            document.getElementById('hostPw').style.display = 'block';
+            document.getElementById('pwConfirm').style.display = 'block';
+            document.getElementById('hostPw').focus();
+        } else {
+            gameMode = 'viewer';
+            startViewer();
+        }
+    }
+
+    document.getElementById('hostPw').addEventListener('keydown', e => {
+        if (e.key === 'Enter') confirmHost();
+    });
+
+    function confirmHost() {
+        if (document.getElementById('hostPw').value === HOST_PW) {
+            gameMode = 'host';
+            startHost();
+        } else {
+            alert('密碼錯誤 Wrong password!');
+            document.getElementById('hostPw').value = '';
+        }
+    }
+
+    function startHost() {
+        document.getElementById('modeDialog').classList.add('hidden');
+        const badge = document.getElementById('modeBadge');
+        badge.textContent = '🎛 HOST MODE';
+        badge.className = 'mode-badge show host';
+        document.getElementById('hostPanel').classList.add('show');
+        document.getElementById('ldExcelInput').addEventListener('change', ldHandleExcel);
+        document.getElementById('changeBtn').classList.add('show');
+        showMusicBtn();
+    }
+
+    function startViewer() {
+        document.getElementById('modeDialog').classList.add('hidden');
+        const badge = document.getElementById('modeBadge');
+        badge.textContent = '👁 VIEW MODE';
+        badge.className = 'mode-badge show viewer';
+        document.getElementById('viewerPanel').classList.add('show');
+        document.getElementById('changeBtn').classList.add('show');
+        ldListenFirebase();
+    }
+
+    // ══════════════════════════════════════════
+    // PRESET PRIZE DATA
+    // ══════════════════════════════════════════
+    const PRESET_ROWS = [
+        [1,                        '',                                              '榮譽會長 周建榮'],
+        [2,                        '女裝石英手表 @$2,880',                          '常務副會長 李鑒峯'],
+        ['3, 4',                   '',                                              '常務副會長 張繼東'],
+        ['5, 6, 7, 8, 9',          'Swiss Romago 精美手錶',                         '司庫 蔡宗富'],
+        ['10, 11, 12',             '純銀珍珠首飾',                                  '副會長 劉臣峰'],
+        ['13, 14',                 '金箔錢幣',                                      '副會長 劉臣峰'],
+        [15,                       '寶石女裝手錶 $1,800',                           '副會長 陳榮欣'],
+        [16,                       '福運黃翡翠手鐲 價值$880',                        '理事 莫秄諾'],
+        [17,                       '1斤庄北韓高麗参中尾 價值 $1,500元',              '副會長 陳賢豪'],
+        [18,                       '吉林野山人参禮盒 價值 $1,200元',                 '理事 曾思源'],
+        ['19, 20',                 'Solac 無線吸塵機 @ HK$1,199',                  '榮譽會長 余壽寧 MH'],
+        ['21, 22',                 'Stylies 溫感按摩背墊 @ HK$999',                 '榮譽會長 余壽寧 MH'],
+        [23,                       'ZWILLING Twin Nova Plus 炒鍋30cm @ $2,999',     '榮譽會長 余壽寧 MH'],
+        ['24, 25',                 '歐洲精美茶具 @ $500',                           '榮譽會長 郭德亮'],
+        [26,                       '',                                              '副會長 何國光'],
+        [27,                       '名貴紅酒',                                      '理事 謝海發教授'],
+        [28,                       '馬會特別版清酒 價值 $1,100',                     '院士 郭保瑩'],
+        [29,                       'Glenmorangie 威士忌 Scotland 價值 $1,000',      '副會長 蘇又萍'],
+        ['30, 31, 32',             '法國白蘭地XO麗丘翡翠 價值$498',                  '會長 文德榮'],
+        ['33, 34, 35',             '法國波爾多紅酒禮盒 (2支木盒) 價值$398',           '會長 文德榮'],
+        ['36, 37, 38, 39, 40, 41', '日本宸崎威士忌 價值$398',                       '副秘書長 張浩東'],
+        ['42, 43, 44, 45, 46',     '柔和醬香型白酒 (貴州芧台酒廠)',                  '副會長 韓嘉軒'],
+        ['47, 48, 49, 50, 51',     '雪曼婷眼部護理孖庄 每份 @ $980',                '秘書長 何紹忠'],
+        ['52, 53, 54',             '意大利 MEDAVITA 藍莓色亮洗髮水套裝 每份 $780',   '理事 劉玉棠'],
+        ['55, 56, 57',             '美髪產品 每份價值＄500元',                       '榮譽會長 葉偉強']
+    ];
+
+    // Expand grouped rows → individual prize entries, descending
+    function expandRows(rawRows) {
+        const out = [];
+        for (const row of rawRows) {
+            const nums = String(row[0]).split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            const name = String(row[1] || '').trim();
+            const spon = String(row[2] || '').trim();
+            for (const n of nums) out.push({ prizeNum: n, prizeName: name, sponsor: spon, quantity: 1 });
+        }
+        out.sort((a, b) => b.prizeNum - a.prizeNum);
+        return out;
+    }
+
+    // ══════════════════════════════════════════
+    // STATE
+    // ══════════════════════════════════════════
+    let prizes = [];
+    let prizeIdx = 0;        // current index (0 = prize #57, last = prize #1)
+    let drawnSeats = [];     // all seats already won — no repeats
+    let curWinners = [];     // winners for current prize
+    let seatPool = [];
+    let rangeSet = false;
+    let drawMethod = null;   // null | 'computer' | 'manual' — locked per prize
+
+    function lockManualDraw(locked) {
+        const inp = document.getElementById('manualWinner');
+        const btn = document.getElementById('manualConfirmBtn');
+        if (inp) { inp.disabled = locked; inp.style.opacity = locked ? '0.35' : '1'; }
+        if (btn) { btn.disabled = locked; btn.style.opacity = locked ? '0.35' : '1'; }
+    }
+    function lockComputerDraw(locked) {
+        document.getElementById('drawBtn').disabled = locked;
+    }
+    function showLockNotice(msg) {
+        const n = document.getElementById('lockNotice');
+        n.textContent = msg;
+        n.style.display = msg ? 'block' : 'none';
+    }
+
+    // ══════════════════════════════════════════
+    // LOAD PRESET
+    // ══════════════════════════════════════════
+    function ldLoadPreset() {
+        prizes = expandRows(PRESET_ROWS);
+        prizeIdx = 0; curWinners = [];
+        pushToFirebase();
+        document.getElementById('ldFilename').textContent = 'mar 11 lucky draw pvcbs.xlsx ✓';
+        renderPrizeTable();
+        updateCurrentPrizeDisplay();
+        document.getElementById('drawBtn').disabled = !rangeSet;
+        alert('✅ 載入 ' + prizes.length + ' 個獎項！\n空白獎品名稱（第1、3、4、26獎）請用手動輸入填寫。');
+    }
+
+    // ══════════════════════════════════════════
+    // EXCEL UPLOAD
+    // ══════════════════════════════════════════
+    function ldHandleExcel(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        document.getElementById('ldFilename').textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+                const raw = rows
+                    .filter(r => { const s = String(r[0]||'').trim(); return s && !isNaN(parseInt(s.split(',')[0])); })
+                    .map(r => [r[0], r[1], r[2]]);
+                prizes = expandRows(raw);
+                prizeIdx = 0; curWinners = [];
+                pushToFirebase();
+                renderPrizeTable();
+                updateCurrentPrizeDisplay();
+                document.getElementById('drawBtn').disabled = !rangeSet;
+                alert('✅ 載入 ' + prizes.length + ' 個獎項！');
+            } catch(err) {
+                alert('❌ 解析失敗。格式: A=獎項# B=獎品名 C=贊助人 D=數量');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // ══════════════════════════════════════════
+    // SEAT RANGE
+    // ══════════════════════════════════════════
+    function ldSetRange() {
+        const min = parseInt(document.getElementById('seatMin').value);
+        const max = parseInt(document.getElementById('seatMax').value);
+        if (isNaN(min) || isNaN(max) || min < 1 || max < min) {
+            alert('無效範圍！Invalid range!'); return;
+        }
+        seatPool = Array.from({ length: max - min + 1 }, (_, i) => i + min)
+                        .filter(s => !drawnSeats.includes(s));
+        rangeSet = true;
+        document.getElementById('rangeStatus').textContent = '✓ ' + min + '–' + max + ' (' + seatPool.length + ' seats)';
+        document.getElementById('drawBtn').disabled = prizes.length === 0;
+        if (fbReady) db.ref('luckyDraw/seatRange').set({ min, max });
+    }
+
+    // ══════════════════════════════════════════
+    // DRAW
+    // ══════════════════════════════════════════
+    let spinTimer = null;
+
+    function ldDraw() {
+        if (!rangeSet || prizes.length === 0 || seatPool.length === 0) return;
+        const prize = prizes[prizeIdx];
+        if (curWinners.length >= prize.quantity) {
+            alert('此獎已抽完，請按「下一個獎項」。'); return;
+        }
+        if (drawMethod === 'manual') { return; }
+        drawMethod = 'computer';
+        lockManualDraw(true);
+        showLockNotice('🔒 電腦抽獎進行中，手動輸入已鎖定 Computer draw active — manual input locked');
+
+        // Pick winner now; commit after animation
+        const winIdx = Math.floor(Math.random() * seatPool.length);
+        const seat = seatPool[winIdx];
+
+        // Disable draw button and show drum
+        document.getElementById('drawBtn').disabled = true;
+        const drum = document.getElementById('spinDrum');
+        const spinEl = document.getElementById('spinNumber');
+        drum.classList.add('active');
+        spinEl.className = 'spin-number spinning';
+        spinEl.textContent = '?';
+        playDrumroll();
+
+        const spinDuration = 2800;
+        const startTime = Date.now();
+
+        function spinStep() {
+            const elapsed = Date.now() - startTime;
+            const progress = elapsed / spinDuration;
+
+            // Show a random seat number from the remaining pool
+            spinEl.textContent = seatPool[Math.floor(Math.random() * seatPool.length)];
+
+            if (progress < 1) {
+                // Ease out: start fast (~55ms), slow to ~420ms
+                const delay = 55 + Math.pow(progress, 2.2) * 420;
+                spinTimer = setTimeout(spinStep, delay);
+            } else {
+                // Land on winner
+                spinEl.textContent = seat;
+                spinEl.className = 'spin-number landing';
+                playFanfare();
+
+                setTimeout(() => {
+                    // Commit draw
+                    seatPool.splice(winIdx, 1);
+                    drawnSeats.push(seat);
+                    curWinners.push(seat);
+                    showWinnerHost(seat, prize);
+                    const done = curWinners.length >= prize.quantity;
+                    document.getElementById('nextBtn').style.display = done ? 'block' : 'none';
+                    document.getElementById('drawBtn').disabled = done;
+                    broadcastDraw(prize, done);
+                }, 600);
+            }
+        }
+
+        spinStep();
+    }
+
+    function ldManualWin() {
+        if (drawMethod === 'computer') { return; }
+        const seat = parseInt(document.getElementById('manualWinner').value);
+        if (isNaN(seat) || seat < 1) { alert('請輸入有效座位號碼！'); return; }
+        if (drawnSeats.includes(seat)) {
+            if (!confirm('座位 ' + seat + ' 已中獎，確定繼續？')) return;
+        }
+        drawMethod = 'manual';
+        lockComputerDraw(true);
+        showLockNotice('🔒 手動輸入進行中，電腦抽獎已鎖定 Manual draw active — computer draw locked');
+        seatPool = seatPool.filter(s => s !== seat);
+        if (!drawnSeats.includes(seat)) drawnSeats.push(seat);
+        curWinners.push(seat);
+        const prize = prizes[prizeIdx];
+        showWinnerHost(seat, prize);
+        const done = curWinners.length >= prize.quantity;
+        document.getElementById('nextBtn').style.display = done ? 'block' : 'none';
+        if (done) lockManualDraw(true);
+        document.getElementById('manualWinner').value = '';
+        broadcastDraw(prize, done);
+    }
+
+    function ldUpdatePrize() {
+        const name = document.getElementById('manualPrizeName').value.trim();
+        const spon = document.getElementById('manualSponsor').value.trim();
+        if (!name && !spon) { alert('請輸入獎品名稱或贊助人！'); return; }
+        if (prizes.length === 0 || prizeIdx >= prizes.length) return;
+        if (name) prizes[prizeIdx].prizeName = name;
+        if (spon) prizes[prizeIdx].sponsor   = spon;
+        updateCurrentPrizeDisplay();
+        if (fbReady) {
+            db.ref('luckyDraw/prizes').set(prizes);
+            if (curWinners.length > 0) broadcastDraw(prizes[prizeIdx], curWinners.length >= prizes[prizeIdx].quantity);
+        }
+        document.getElementById('manualPrizeName').value = '';
+        document.getElementById('manualSponsor').value   = '';
+        alert('✅ 更新完成！');
+    }
+
+    function ldNextPrize() {
+        const prize = prizes[prizeIdx];
+        const entry = { prizeNum: prize.prizeNum, prizeName: prize.prizeName, sponsor: prize.sponsor, winners: [...curWinners] };
+        if (fbReady) db.ref('luckyDraw/history').push(entry);
+        prizeIdx++;
+        curWinners = [];
+        if (prizeIdx >= prizes.length) {
+            alert('🎉 所有獎項已抽出！All prizes drawn!');
+            document.getElementById('drawBtn').disabled = true;
+            document.getElementById('nextBtn').style.display = 'none';
+            if (fbReady) { db.ref('luckyDraw/currentDraw').set({ done: true }); db.ref('luckyDraw/currentPrizeIdx').set(prizeIdx); }
+            return;
+        }
+        if (fbReady) { db.ref('luckyDraw/currentPrizeIdx').set(prizeIdx); db.ref('luckyDraw/currentDraw').set(null); db.ref('luckyDraw/drawnSeats').set([...drawnSeats]); }
+        updateCurrentPrizeDisplay();
+        drawMethod = null;
+        try { lockManualDraw(false); } catch(e) {}
+        showLockNotice('');
+        lockComputerDraw(false);
+        document.getElementById('winnerFlash').classList.remove('show');
+        document.getElementById('allWinners').style.display = 'none';
+        document.getElementById('nextBtn').style.display = 'none';
+        document.getElementById('spinDrum').classList.remove('active');
+        renderPrizeTable();
+    }
+
+    function broadcastDraw(prize, done) {
+        if (!fbReady) return;
+        db.ref('luckyDraw/currentDraw').set({ prizeNum: prize.prizeNum, prizeName: prize.prizeName, sponsor: prize.sponsor, quantity: prize.quantity, winners: [...curWinners], allDrawn: done, timestamp: Date.now() });
+        db.ref('luckyDraw/drawnSeats').set([...drawnSeats]);
+    }
+
+    function pushToFirebase() {
+        if (!fbReady) return;
+        db.ref('luckyDraw/prizes').set(prizes);
+        db.ref('luckyDraw/currentPrizeIdx').set(0);
+        db.ref('luckyDraw/drawnSeats').set([]);
+        db.ref('luckyDraw/history').set(null);
+        db.ref('luckyDraw/currentDraw').set(null);
+    }
+
+    // ══════════════════════════════════════════
+    // HOST DISPLAY
+    // ══════════════════════════════════════════
+    function showWinnerHost(seat, prize) {
+        const flash = document.getElementById('winnerFlash');
+        flash.classList.remove('show'); void flash.offsetWidth;
+        document.getElementById('winnerSeat').textContent = seat;
+        flash.classList.add('show');
+        if (prize.quantity > 1) {
+            document.getElementById('allWinners').style.display = 'block';
+            document.getElementById('allWinnersText').textContent = curWinners.join('   |   ');
+        }
+        updateCurrentPrizeDisplay();
+    }
+
+    function updateCurrentPrizeDisplay() {
+        const card = document.getElementById('currentPrizeCard');
+        card.style.display = 'block';
+        if (prizeIdx >= prizes.length) {
+            document.getElementById('prizeNum').textContent  = '🎉 All Done!';
+            document.getElementById('prizeName').textContent = '';
+            document.getElementById('prizeSponsor').textContent = '';
+            document.getElementById('prizeQty').textContent = '';
+            return;
+        }
+        const p = prizes[prizeIdx];
+        document.getElementById('prizeNum').textContent     = '第 ' + p.prizeNum + ' 獎';
+        document.getElementById('prizeName').textContent    = p.prizeName  || '（待填 — 請用手動輸入）';
+        document.getElementById('prizeSponsor').textContent = '贊助 Sponsor: ' + (p.sponsor || '—');
+        document.getElementById('prizeQty').textContent     = '數量 Qty: ' + p.quantity + '  ｜  已抽 Drawn: ' + curWinners.length;
+    }
+
+    function renderPrizeTable() {
+        const wrap = document.getElementById('prizeTableWrap');
+        const tbl  = document.getElementById('prizeTable');
+        wrap.style.display = 'block';
+        const rows = prizes.map((p, i) => {
+            const cls = i === prizeIdx ? 'ld-current' : i < prizeIdx ? 'ld-done' : '';
+            return '<tr class="' + cls + '"><td>' + p.prizeNum + '</td><td>' +
+                (p.prizeName || '<span style="color:#f5576c;">待填</span>') + '</td><td>' +
+                (p.sponsor   || '<span style="color:#f5576c;">待填</span>') + '</td></tr>';
+        }).join('');
+        tbl.innerHTML = '<tr><th>獎項#</th><th>獎品</th><th>贊助人</th></tr>' + rows;
+    }
+
+    // ══════════════════════════════════════════
+    // FIREBASE LISTENER (viewer)
+    // ══════════════════════════════════════════
+    function ldListenFirebase() {
+        if (!fbReady) return;
+
+        db.ref('luckyDraw/currentDraw').on('value', snap => {
+            const draw = snap.val();
+            updateViewerDisplay(draw);
+        });
+
+        db.ref('luckyDraw/history').on('value', snap => {
+            updateViewerHistory(snap.val());
+        });
+    }
+
+    function updateViewerDisplay(draw) {
+        const waiting = document.getElementById('vpWaiting');
+        const box     = document.getElementById('vpPrizeBox');
+
+        if (!draw || draw.done) {
+            waiting.style.display = draw && draw.done ? 'block' : 'block';
+            waiting.textContent   = draw && draw.done ? '🎉 所有獎項已抽出！All Done!' : '⏳ 等緊主持人開始抽獎...\nWaiting for host to start the draw...';
+            return;
+        }
+
+        waiting.style.display = 'none';
+        box.classList.add('show');
+
+        document.getElementById('vpPrizeNum').textContent  = '第 ' + draw.prizeNum + ' 獎';
+        document.getElementById('vpPrizeName').textContent = draw.prizeName || '—';
+        document.getElementById('vpSponsor').textContent   = draw.sponsor ? '贊助 Sponsored by: ' + draw.sponsor : '';
+
+        const seatEl = document.getElementById('vpWinnerSeat');
+        if (draw.winners && draw.winners.length > 0) {
+            const text = draw.winners.join('  |  ');
+            if (seatEl.textContent !== text) {
+                seatEl.style.animation = 'none';
+                void seatEl.offsetWidth;
+                seatEl.textContent     = text;
+                seatEl.style.animation = 'seatPop 0.5s ease-out';
+            }
+        } else {
+            seatEl.textContent = '--';
+        }
+    }
+
+    function updateViewerHistory(hist) {
+        if (!hist) return;
+        const entries = Object.values(hist).reverse();
+        if (entries.length === 0) return;
+
+        const vpHist = document.getElementById('vpHistory');
+        const vpList = document.getElementById('vpHistoryList');
+        vpHist.style.display = 'block';
+        vpList.innerHTML = entries.map(e =>
+            '<div class="vp-history-item">' +
+            '<span class="vh-num">第' + e.prizeNum + '獎</span>' +
+            '<span class="vh-name">' + (e.prizeName || '—') + '</span>' +
+            '<span class="vh-sponsor">' + (e.sponsor || '') + '</span>' +
+            '<span class="vh-win">🏆 ' + (e.winners ? e.winners.join(', ') : '—') + '</span>' +
+            '</div>'
+        ).join('');
+    }
+
+    // ══════════════════════════════════════════
+    // AUDIO SYSTEM
+    // ══════════════════════════════════════════
+    const AUDIO = {
+        bgm:      new Audio('assets/audio/bgm.mp3'),
+        drumroll: new Audio('assets/audio/drumroll.mp3'),
+        fanfare:  new Audio('assets/audio/fanfare.mp3'),
+    };
+
+    const AU_STATUS_IDS = { bgm: 'auBgmStatus', drumroll: 'auDrumStatus', fanfare: 'auFanfareStatus' };
+
+    function loadAudio(key, input) {
+        const file = input.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        AUDIO[key].src = url;
+        AUDIO[key].load();
+        const statusEl = document.getElementById(AU_STATUS_IDS[key]);
+        if (statusEl) statusEl.textContent = '✓ ' + file.name;
+        // If BGM was playing, restart with new file
+        if (key === 'bgm' && bgmOn) { AUDIO.bgm.play().catch(() => {}); }
+    }
+
+    function previewAudio(key) {
+        AUDIO[key].currentTime = 0;
+        AUDIO[key].play().catch(() => { alert('No audio loaded for ' + key + ' yet.'); });
+        if (key !== 'bgm') setTimeout(() => { AUDIO[key].pause(); AUDIO[key].currentTime = 0; }, 3000);
+    }
+    AUDIO.bgm.loop = true;
+    AUDIO.bgm.volume = 0.45;
+    AUDIO.drumroll.loop = true;
+    AUDIO.drumroll.volume = 0.75;
+    AUDIO.fanfare.volume = 1.0;
+
+    let bgmOn = false;
+    let bgmMuted = false;
+
+    function showMusicBtn() {
+        document.getElementById('musicBar').classList.add('show');
+        if (!bgmOn) { AUDIO.bgm.play().catch(() => {}); bgmOn = true; }
+    }
+
+    function toggleMusicPanel() {
+        // kept for compatibility — no longer used
+        // Start BGM on first open if not started
+        if (panel.classList.contains('show') && !bgmOn) {
+            AUDIO.bgm.play().catch(() => {});
+            bgmOn = true;
+        }
+    }
+
+    // Close panel when clicking outside
+    document.addEventListener('click', e => {
+        const btn = document.getElementById('musicBtn');
+        const panel = document.getElementById('musicPanel');
+        if (panel && btn && !panel.contains(e.target) && e.target !== btn) {
+            panel.classList.remove('show');
+        }
+    });
+
+
+    function setBgmVolume(val) {
+        const pct = parseInt(val);
+        AUDIO.bgm.volume = pct / 100;
+        document.getElementById('volPct').textContent = pct + '%';
+        if (bgmMuted && pct > 0) { bgmMuted = false; document.getElementById('muteBtn').textContent = '🔇 Mute BGM'; }
+        if (!bgmOn) { AUDIO.bgm.play().catch(() => {}); bgmOn = true; }
+    }
+
+    function toggleMute() {
+        const btn = document.getElementById('muteBtn');
+        if (bgmMuted) {
+            AUDIO.bgm.muted = false;
+            bgmMuted = false;
+            btn.textContent = '🔇 Mute';
+        } else {
+            AUDIO.bgm.muted = true;
+            bgmMuted = true;
+            btn.textContent = '🔊 Unmute';
+        }
+    }
+
+    const trackMuted = { bgm: false, drumroll: false, fanfare: false };
+    const MUTE_BTN_IDS = { bgm: 'muteBtnBgm', drumroll: 'muteBtnDrumroll', fanfare: 'muteBtnFanfare' };
+
+    function toggleTrackMute(key) {
+        const btn = document.getElementById(MUTE_BTN_IDS[key]);
+        if (!btn) return;
+        trackMuted[key] = !trackMuted[key];
+        AUDIO[key].muted = trackMuted[key];
+        btn.textContent = trackMuted[key] ? '🔇' : '🔊';
+        btn.classList.toggle('muted', trackMuted[key]);
+    }
+
+    function playDrumroll() {
+        AUDIO.drumroll.currentTime = 0;
+        AUDIO.drumroll.play().catch(() => {});
+    }
+
+    function stopDrumroll() {
+        AUDIO.drumroll.pause();
+        AUDIO.drumroll.currentTime = 0;
+    }
+
+    function playFanfare() {
+        stopDrumroll();
+        // Try MP3 fanfare first, fall back to Web Audio synth
+        AUDIO.fanfare.currentTime = 0;
+        const p = AUDIO.fanfare.play();
+        if (p) p.catch(() => playSynthFanfare());
+    }
+
+    function playSynthFanfare() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const t = ctx.currentTime;
+            [[523,t,0.25],[659,t+0.13,0.25],[784,t+0.26,0.3],[1047,t+0.39,0.55]].forEach(([f,st,dur]) => {
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.connect(g); g.connect(ctx.destination);
+                o.frequency.value = f; o.type = 'sine';
+                g.gain.setValueAtTime(0, st);
+                g.gain.linearRampToValueAtTime(0.35, st + 0.05);
+                g.gain.exponentialRampToValueAtTime(0.001, st + dur);
+                o.start(st); o.stop(st + dur);
+            });
+        } catch(e) {}
+    }
+    </script>
+</body>
+</html>

@@ -1,10 +1,192 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=bingo_game_multiplayer.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商評 2026 春季晚宴 — 互動遊戲</title>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url('assets/images/background.jpg');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.2;
+            z-index: 0;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        /* Logo */
+        .logo-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .logo-row img {
+            height: 90px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.35));
+        }
+
+        /* Title */
+        h1 {
+            font-family: 'Luckiest Guy', 'Impact', sans-serif;
+            font-size: clamp(2em, 6vw, 3.4em);
+            color: white;
+            letter-spacing: 4px;
+            text-shadow: 0 0 40px rgba(240,147,251,0.8), 3px 3px 8px rgba(0,0,0,0.5);
+            margin-bottom: 8px;
+            animation: titlePulse 3s ease-in-out infinite;
+        }
+        .subtitle {
+            font-size: 1.1em;
+            color: rgba(255,255,255,0.7);
+            letter-spacing: 3px;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+        }
+        @keyframes titlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        /* Game cards */
+        .cards {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .game-card {
+            background: rgba(255,255,255,0.97);
+            border-radius: 24px;
+            padding: 40px 36px;
+            width: 320px;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+            transition: transform 0.25s, box-shadow 0.25s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .game-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 55px rgba(0,0,0,0.45);
+        }
+
+        .game-card .icon {
+            font-size: 3.5em;
+            line-height: 1;
+        }
+        .game-card .card-title {
+            font-family: 'Luckiest Guy', 'Impact', sans-serif;
+            font-size: 2em;
+            letter-spacing: 3px;
+        }
+        .game-card .card-subtitle {
+            font-size: 1em;
+            color: #666;
+            letter-spacing: 1px;
+        }
+        .game-card .go-btn {
+            margin-top: 8px;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1em;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            letter-spacing: 1px;
+        }
+
+        /* Bingo card */
+        .game-card.bingo .card-title { color: #764ba2; }
+        .game-card.bingo .go-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Lucky draw card */
+        .game-card.lucky .card-title { color: #B8860B; }
+        .game-card.lucky .go-btn {
+            background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%);
+            color: #333;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 50px;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.85em;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 600px) {
+            .game-card { width: 100%; max-width: 340px; padding: 30px 24px; }
+            .logo-row img { height: 65px; }
+        }
+    </style>
 </head>
 <body>
-    <script>window.location.replace("bingo_game_multiplayer.html");</script>
+    <div class="page">
+        <div class="logo-row">
+            <img src="assets/logos/Pvcbs.gif" alt="PVCBS" onerror="this.style.display='none'">
+            <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" onerror="this.style.display='none'">
+        </div>
+
+        <h1>商評 2026</h1>
+        <div class="subtitle">春季晚宴 · Spring Dinner · 互動遊戲</div>
+
+        <div class="cards">
+            <!-- Bingo -->
+            <a class="game-card bingo" href="bingo_game_multiplayer.html">
+                <div class="icon">🎱</div>
+                <div class="card-title">BINGO</div>
+                <div class="card-subtitle">行大運 · Bingo 遊戲</div>
+                <button class="go-btn">進入遊戲 Play Now</button>
+            </a>
+
+            <!-- Lucky Draw -->
+            <a class="game-card lucky" href="lucky_draw.html">
+                <div class="icon">🎁</div>
+                <div class="card-title">幸運抽獎</div>
+                <div class="card-subtitle">Lucky Draw · Spring Dinner 2026</div>
+                <button class="go-btn">進入抽獎 Enter</button>
+            </a>
+        </div>
+
+        <div class="footer">Powered by AlphaSight HK &nbsp;·&nbsp; info@alphasighthk.com</div>
+    </div>
 </body>
 </html>

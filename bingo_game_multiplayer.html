@@ -1280,6 +1280,30 @@
             color: #111;
         }
 
+        /* Change mode button */
+        #changeBtn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 25px;
+            font-size: 0.9em;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            display: none;
+            transition: background 0.2s;
+            text-transform: none;
+            letter-spacing: 0;
+            font-family: inherit;
+            box-shadow: none;
+        }
+        #changeBtn:hover { background: rgba(255,255,255,0.28); transform: none; box-shadow: none; }
+        #changeBtn.show { display: block; }
+
         body.spectator-mode {
             background: radial-gradient(ellipse at top, #1a0533 0%, #0d0221 60%, #000 100%) !important;
             background-attachment: scroll !important;
@@ -1596,6 +1620,7 @@
     <!-- Mode Selection Dialog -->
     <div class="mode-dialog" id="modeDialog">
         <div class="mode-content" style="position:relative;">
+            <a href="index.html" style="position:absolute;top:14px;left:18px;font-size:0.8em;color:#aaa;text-decoration:none;">← 返回 Back</a>
             <h2> Select Mode</h2>
             <p>主持人或觀看模式？<br>HOST or VIEW mode?</p>
             <div class="mode-buttons">
@@ -1628,6 +1653,9 @@
 
     <!-- Mode Badge -->
     <div class="mode-badge" id="modeBadge"></div>
+
+    <!-- Change mode button -->
+    <button id="changeBtn" onclick="location.reload()">↩ 重選模式 Change Mode</button>
 
     <!-- Verification Timer Overlay -->
     <div class="verification-timer" id="verificationTimer">
@@ -2179,8 +2207,9 @@
         }
         
         function initializeGameMode() {
-            // Hide mode dialog
+            // Hide mode dialog, show change-mode button
             document.getElementById('modeDialog').classList.add('hidden');
+            document.getElementById('changeBtn').classList.add('show');
             
             // Show and configure mode badge
             const badge = document.getElementById('modeBadge');
