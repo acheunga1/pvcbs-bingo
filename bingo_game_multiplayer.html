@@ -1243,22 +1243,371 @@
             width: 100px;
             cursor: pointer;
         }
+
+        /* ========================================
+           SPECTATOR (VIEW) MODE STYLES
+           ======================================== */
+        .mode-btn.spectator {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: #111;
+        }
+
+        /* Tiny player button hidden in bottom-right of dialog */
+        .mode-btn-player-hidden {
+            position: absolute;
+            bottom: 10px;
+            right: 12px;
+            padding: 4px 10px;
+            font-size: 0.65em;
+            color: #bbb;
+            background: transparent;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: none;
+            box-shadow: none;
+            font-weight: normal;
+            letter-spacing: 0;
+            transition: color 0.2s;
+        }
+        .mode-btn-player-hidden:hover {
+            color: #888;
+            transform: none;
+            box-shadow: none;
+        }
+        .mode-badge.spectator {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: #111;
+        }
+
+        body.spectator-mode {
+            background: radial-gradient(ellipse at top, #1a0533 0%, #0d0221 60%, #000 100%) !important;
+            background-attachment: scroll !important;
+            padding: 0;
+        }
+        body.spectator-mode::before { display: none !important; }
+        body.spectator-mode #bgVideo { display: none !important; }
+        body.spectator-mode .game-area,
+        body.spectator-mode h1,
+        body.spectator-mode .organizer-header,
+        body.spectator-mode .player-info-bar,
+        body.spectator-mode .music-controls { display: none !important; }
+        body.spectator-mode .container { max-width: 100%; padding: 0; }
+        body.spectator-mode .mode-badge { top: 15px; right: 15px; }
+
+        /* Spectator layout */
+        .spectator-display {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 30px 20px 40px;
+            width: 100%;
+        }
+        body.spectator-mode .spectator-display { display: flex; }
+
+        .spectator-title {
+            font-family: 'Luckiest Guy', 'Impact', sans-serif;
+            font-size: 2.8em;
+            color: white;
+            text-align: center;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 40px rgba(240,147,251,0.9), 0 0 80px rgba(118,75,162,0.5);
+            animation: titlePulse 3s ease-in-out infinite;
+        }
+        .spectator-subtitle {
+            font-size: 1em;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        /* PVCBS top logo */
+        .spectator-top-logo {
+            height: clamp(60px, 16vw, 120px);
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 14px rgba(255,255,255,0.25));
+            margin-bottom: 6px;
+        }
+
+        /* Ball row — ball shifted slightly left by offsetting the whole row */
+        .spectator-ball-row {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(30px, 9vw, 70px);
+            margin: 10px auto 30px;
+            transform: translateX(clamp(-30px, -4vw, -15px));
+        }
+
+        /* Right brand: AlphaSight logo + 策劃與製作 stacked */
+        .spectator-right-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .spectator-brand-text {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: clamp(0.65em, 2.2vw, 0.95em);
+            letter-spacing: 2px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255,255,255,0.4);
+            white-space: normal;
+            font-weight: bold;
+            line-height: 1.6;
+        }
+        .spectator-side-logo {
+            height: clamp(90px, 24vw, 160px);
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 10px rgba(240,147,251,0.6));
+            flex-shrink: 0;
+            animation: logoFloat 4s ease-in-out infinite;
+        }
+        .spectator-side-logo:last-child { animation-delay: 2s; }
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px); }
+            50%       { transform: translateY(-6px); }
+        }
+
+        /* The big ball — scales with viewport so logos always fit beside it */
+        .spectator-ball-wrap {
+            position: relative;
+            width: clamp(160px, 44vw, 280px);
+            height: clamp(160px, 44vw, 280px);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .spectator-ball {
+            width: clamp(150px, 42vw, 270px);
+            height: clamp(150px, 42vw, 270px);
+            border-radius: 50%;
+            background: radial-gradient(circle at 33% 28%,
+                rgba(255,255,255,0.95) 0%,
+                #f093fb 18%,
+                #9b59b6 40%,
+                #764ba2 60%,
+                #330867 85%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow:
+                0 0 50px rgba(240,147,251,0.8),
+                0 0 100px rgba(118,75,162,0.5),
+                0 0 150px rgba(102,126,234,0.3),
+                inset 0 -30px 60px rgba(0,0,0,0.35),
+                inset 0 15px 35px rgba(255,255,255,0.15);
+        }
+        /* Specular highlight */
+        .spectator-ball::before {
+            content: '';
+            position: absolute;
+            top: 12%;
+            left: 18%;
+            width: 38%;
+            height: 26%;
+            background: radial-gradient(ellipse, rgba(255,255,255,0.75) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: rotate(-30deg);
+            pointer-events: none;
+        }
+        /* Animated ring around ball */
+        .spectator-ball-wrap::after {
+            content: '';
+            position: absolute;
+            width: clamp(172px, 46vw, 292px);
+            height: clamp(172px, 46vw, 292px);
+            border-radius: 50%;
+            border: 3px solid transparent;
+            background: transparent;
+            box-shadow: 0 0 0 0 rgba(240,147,251,0);
+            animation: ringPulse 2.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes ringPulse {
+            0% { box-shadow: 0 0 0 0 rgba(240,147,251,0.6), 0 0 0 0 rgba(118,75,162,0.4); }
+            50% { box-shadow: 0 0 0 25px rgba(240,147,251,0), 0 0 0 50px rgba(118,75,162,0); }
+            100% { box-shadow: 0 0 0 0 rgba(240,147,251,0), 0 0 0 0 rgba(118,75,162,0); }
+        }
+
+        .spectator-ball .ball-number {
+            font-size: clamp(3em, 10vw, 6.5em);
+            font-weight: 900;
+            color: white;
+            text-shadow: 3px 3px 8px rgba(0,0,0,0.6), 0 0 25px rgba(255,255,255,0.5);
+            line-height: 1;
+            position: relative;
+            z-index: 1;
+            display: block;
+            font-family: 'Luckiest Guy', 'Impact', 'Arial Black', sans-serif;
+            letter-spacing: -2px;
+        }
+        .spectator-ball.waiting .ball-number {
+            font-size: 3em;
+            opacity: 0.5;
+        }
+
+        /* Ball entrance animation */
+        .spectator-ball.bounce-in {
+            animation: ballJumpIn 0.85s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards,
+                       ballGlowPulse 2.5s ease-in-out 0.85s infinite;
+        }
+        .spectator-ball.bounce-in .ball-number {
+            animation: numberPopIn 0.45s ease-out 0.35s both;
+        }
+        /* Idle glow when no number yet */
+        .spectator-ball.idle {
+            animation: ballGlowPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes ballJumpIn {
+            0%   { transform: translateY(-350px) scale(0.35) rotate(-18deg); opacity: 0; }
+            45%  { transform: translateY(28px) scale(1.13) rotate(4deg);  opacity: 1; }
+            62%  { transform: translateY(-16px) scale(0.93) rotate(-2deg); }
+            76%  { transform: translateY(9px) scale(1.05) rotate(1deg); }
+            87%  { transform: translateY(-5px) scale(0.97); }
+            100% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes ballGlowPulse {
+            0%, 100% {
+                box-shadow: 0 0 50px rgba(240,147,251,0.8), 0 0 100px rgba(118,75,162,0.5),
+                            0 0 150px rgba(102,126,234,0.3),
+                            inset 0 -30px 60px rgba(0,0,0,0.35), inset 0 15px 35px rgba(255,255,255,0.15);
+            }
+            50% {
+                box-shadow: 0 0 80px rgba(240,147,251,1), 0 0 150px rgba(118,75,162,0.8),
+                            0 0 220px rgba(102,126,234,0.5), 0 30px 60px rgba(0,0,0,0.4),
+                            inset 0 -30px 60px rgba(0,0,0,0.35), inset 0 15px 35px rgba(255,255,255,0.15);
+            }
+        }
+        @keyframes numberPopIn {
+            0%   { transform: scale(0.1) rotate(-25deg); opacity: 0; }
+            55%  { transform: scale(1.25) rotate(6deg);  opacity: 1; }
+            75%  { transform: scale(0.9) rotate(-2deg); }
+            100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+
+        /* Sparkle particles */
+        .sparkle-particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: sparkleFly 0.9s ease-out forwards;
+        }
+        @keyframes sparkleFly {
+            0%   { transform: scale(0) translate(0, 0); opacity: 1; }
+            60%  { opacity: 0.8; }
+            100% { transform: scale(1) translate(var(--tx), var(--ty)); opacity: 0; }
+        }
+
+        /* Phrase below ball */
+        .spectator-phrase {
+            font-size: 1.6em;
+            color: rgba(255,255,255,0.88);
+            text-align: center;
+            margin-bottom: 35px;
+            min-height: 2.2em;
+            text-shadow: 0 0 25px rgba(240,147,251,0.6);
+            line-height: 1.5;
+            max-width: 700px;
+            padding: 0 20px;
+        }
+        .spectator-phrase.glow-in {
+            animation: textGlowIn 0.55s ease-out;
+        }
+        @keyframes textGlowIn {
+            from { opacity: 0; transform: translateY(18px); filter: blur(4px); }
+            to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+        }
+
+        /* Number board section */
+        .spectator-board-title {
+            color: rgba(255,255,255,0.55);
+            font-size: 1em;
+            margin-bottom: 12px;
+            text-align: center;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+        .spectator-board-wrap {
+            width: 100%;
+            max-width: 880px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 18px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* Number balls in spectator mode (dark theme) */
+        body.spectator-mode .number-ball {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.35);
+            font-size: 0.85em;
+        }
+        body.spectator-mode .number-ball.called {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-color: #f093fb;
+            color: white;
+            box-shadow: 0 0 12px rgba(240,147,251,0.7), 0 0 25px rgba(245,87,108,0.4);
+            transform: scale(1.08);
+            animation: ballCallPop 0.4s ease-out;
+        }
+        @keyframes ballCallPop {
+            0%  { transform: scale(0.5); opacity: 0.3; }
+            60% { transform: scale(1.2); }
+            100%{ transform: scale(1.08); opacity: 1; }
+        }
+
+        /* Spectator stats strip */
+        .spectator-stats {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 25px;
+            color: rgba(255,255,255,0.6);
+            font-size: 1.1em;
+            letter-spacing: 1px;
+        }
+        .spectator-stats span strong {
+            color: #f093fb;
+            font-size: 1.3em;
+        }
+
+        @media (max-width: 600px) {
+            .spectator-title { font-size: 1.8em; }
+            .spectator-phrase { font-size: 1.2em; }
+            body.spectator-mode .number-ball { font-size: 0.7em; }
+        }
     </style>
 </head>
 <body>
     <!-- Mode Selection Dialog -->
     <div class="mode-dialog" id="modeDialog">
-        <div class="mode-content">
+        <div class="mode-content" style="position:relative;">
             <h2> Select Mode</h2>
-            <p>Are you the HOST or a PLAYER?<br>你係主持人定玩家？</p>
+            <p>主持人或觀看模式？<br>HOST or VIEW mode?</p>
             <div class="mode-buttons">
                 <button class="mode-btn host" onclick="selectMode('host')">
                      HOST<br><small>主持人</small>
                 </button>
-                <button class="mode-btn viewer" onclick="selectMode('player')">
-                     PLAYER<br><small>玩家</small>
+                <button class="mode-btn spectator" onclick="selectMode('spectator')">
+                    👁 VIEW<br><small>觀看</small>
                 </button>
             </div>
+            <!-- Player mode: tiny hidden button in bottom-right corner -->
+            <button class="mode-btn-player-hidden" onclick="selectMode('player')">AlphaSight</button>
             <input type="password" class="password-input" id="hostPassword" placeholder="Enter HOST password 輸入密碼">
             <button class="mode-btn host" id="hostConfirm" style="display:none; margin-top:20px; width:100%;" onclick="confirmHost()">
                  Confirm 確認
@@ -1323,7 +1672,46 @@
         </div>
 
         <h1><img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" class="title-logo" style="height:4.4em;width:auto;"> 商評 2026 BINGO 行大運 <img src="assets/logos/PVCBSLOGO.png" alt="PVCBS Organizer" class="title-logo" style="height:4.4em;width:auto;"></h1>
-        
+
+        <!-- ===== SPECTATOR (VIEW) MODE DISPLAY ===== -->
+        <div class="spectator-display" id="spectatorDisplay">
+
+            <!-- PVCBS organizer logo at top centre -->
+            <img src="assets/logos/PVCBSLOGO.png" alt="PVCBS" class="spectator-top-logo">
+
+            <!-- Title: without the first 2 Chinese characters -->
+            <div class="spectator-title">2026 BINGO 行大運</div>
+
+            <!-- Ball (shifted left) + AlphaSight brand on right -->
+            <div class="spectator-ball-row">
+                <div class="spectator-ball-wrap" id="spectatorBallWrap">
+                    <div class="spectator-ball idle" id="spectatorBall">
+                        <span class="ball-number" id="spectatorNumber">--</span>
+                    </div>
+                </div>
+                <div class="spectator-right-brand">
+                    <img src="assets/logos/logo-gold.PNG" alt="AlphaSight HK" class="spectator-side-logo">
+                    <div class="spectator-brand-text">為商會專屬定制線上遊戲<br>查詢: info@alphasighthk.com</div>
+                </div>
+            </div>
+
+            <!-- Phrase / announcement text -->
+            <div class="spectator-phrase" id="spectatorPhrase">等緊開始... Waiting to start...</div>
+
+            <!-- Stats strip -->
+            <div class="spectator-stats">
+                <span>已抽 Drawn: <strong id="spectatorDrawn">0</strong></span>
+                <span>剩餘 Left: <strong id="spectatorLeft">75</strong></span>
+            </div>
+
+            <!-- Number board -->
+            <div class="spectator-board-title">所有號碼 Number Board (1–75)</div>
+            <div class="spectator-board-wrap">
+                <div class="number-board" id="spectatorNumberBoard"></div>
+            </div>
+        </div>
+        <!-- ===== END SPECTATOR DISPLAY ===== -->
+
         <div class="game-area">
             <!-- Controls Section -->
             <div class="controls-section">
@@ -1773,6 +2161,9 @@
             } else if (mode === 'player') {
                 gameMode = 'player';
                 initializeGameMode();
+            } else if (mode === 'spectator') {
+                gameMode = 'spectator';
+                initializeGameMode();
             }
         }
         
@@ -1794,11 +2185,45 @@
             // Show and configure mode badge
             const badge = document.getElementById('modeBadge');
             badge.classList.add('show');
-            // Add CSS styling class ('host' or 'viewer' for existing CSS gradient rules)
-            badge.classList.add(gameMode === 'host' ? 'host' : 'viewer');
-            badge.textContent = gameMode === 'host' ? ' HOST MODE' : ' PLAYER MODE';
+            if (gameMode === 'host') {
+                badge.classList.add('host');
+                badge.textContent = ' HOST MODE';
+            } else if (gameMode === 'spectator') {
+                badge.classList.add('spectator');
+                badge.textContent = '👁 VIEW MODE';
+            } else {
+                badge.classList.add('viewer');
+                badge.textContent = ' PLAYER MODE';
+            }
 
-            if (gameMode === 'player') {
+            if (gameMode === 'spectator') {
+                // SPECTATOR (VIEW) MODE — no name entry, no card, just watch numbers
+                document.body.classList.add('spectator-mode');
+
+                // Unlock speech synthesis
+                if ('speechSynthesis' in window) {
+                    const u = new SpeechSynthesisUtterance('');
+                    speechSynthesis.speak(u);
+                    speechSynthesis.cancel();
+                }
+
+                // Init number pool
+                availableNumbers = Array.from({length: 75}, (_, i) => i + 1);
+                calledNumbers = [];
+                updateStats();
+
+                // Build spectator number board
+                generateSpectatorNumberBoard();
+
+                // Connect Firebase
+                if (isFirebaseConfigured) {
+                    listenForNumbers();
+                    loadCalledNumbers();
+                }
+
+                console.log('👁 SPECTATOR mode activated');
+
+            } else if (gameMode === 'player') {
                 // Add viewer-mode class for 9:16 mobile layout
                 document.body.classList.add('viewer-mode');
                 
@@ -1870,10 +2295,13 @@
                                 calledNumbers.push(num);
                                 const ball = document.getElementById(`ball-${num}`);
                                 if (ball) ball.classList.add('called');
+                                const sBall = document.getElementById(`sball-${num}`);
+                                if (sBall) sBall.classList.add('called');
                             }
                         });
                         availableNumbers = availableNumbers.filter(n => !numbers.includes(n));
                         updateStats();
+                        updateSpectatorStats();
                         console.log(`✅ Loaded ${numbers.length} previously called numbers: [${numbers.join(', ')}]`);
                     } else {
                         console.log("📥 No previous numbers found (fresh game)");
@@ -1946,12 +2374,15 @@
                             calledNumbers.push(num);
                             const ball = document.getElementById(`ball-${num}`);
                             if (ball) ball.classList.add('called');
+                            const sBall = document.getElementById(`sball-${num}`);
+                            if (sBall) sBall.classList.add('called');
                             newNumbers++;
                         }
                     });
                     if (newNumbers > 0) {
                         availableNumbers = availableNumbers.filter(n => !numbers.includes(n));
                         updateStats();
+                        updateSpectatorStats();
                         console.log(`🔄 Synced ${newNumbers} missed numbers. Total: ${calledNumbers.length}`);
                     }
                 } else if (numbers === null) {
@@ -1970,38 +2401,61 @@
                     updateStats();
                     document.getElementById('currentBall').textContent = '--';
                     document.getElementById('cantoneseText').textContent = '等緊主持人開始 Waiting for HOST...';
+                    // Reset spectator display
+                    const spNum = document.getElementById('spectatorNumber');
+                    if (spNum) { spNum.textContent = '--'; }
+                    const spPhrase = document.getElementById('spectatorPhrase');
+                    if (spPhrase) { spPhrase.textContent = '等緊開始... Waiting to start...'; }
+                    const spBall = document.getElementById('spectatorBall');
+                    if (spBall) { spBall.classList.remove('bounce-in'); spBall.classList.add('idle'); }
                 }
             });
         }
         
-        // Display synced number (for viewers)
+        // Display synced number (for viewers and spectators)
         function displaySyncedNumber(number, phrase) {
-            // Skip if already called (avoid duplicates)
+            // Spectator mode: always update the big ball (even on reload)
+            if (gameMode === 'spectator') {
+                updateSpectatorDisplay(number, phrase);
+            }
+
+            // Skip if already called (avoid duplicates in tracking)
             if (calledNumbers.includes(number)) {
-                console.log(`Number ${number} already called, skipping...`);
+                console.log(`Number ${number} already called, skipping dupe...`);
                 return;
             }
-            
-            // Update display
+
+            calledNumbers.push(number);
+
+            // Mark on spectator number board
+            const sBall = document.getElementById(`sball-${number}`);
+            if (sBall) sBall.classList.add('called');
+
+            if (gameMode === 'spectator') {
+                availableNumbers = availableNumbers.filter(n => n !== number);
+                updateStats();
+                updateSpectatorStats();
+                speakCantonese(number, phrase);
+                return;
+            }
+
+            // PLAYER mode: update main display
             const ballElement = document.getElementById('currentBall');
             ballElement.style.animation = 'none';
             setTimeout(() => {
                 ballElement.style.animation = 'ballPop 0.5s ease-out';
                 ballElement.textContent = number;
             }, 10);
-            
+
             document.getElementById('cantoneseText').textContent = phrase;
-            
+
             // Mark on number board
             const ball = document.getElementById(`ball-${number}`);
-            if (ball && !ball.classList.contains('called')) {
-                ball.classList.add('called');
-                calledNumbers.push(number);
-            }
-            
+            if (ball) ball.classList.add('called');
+
+            availableNumbers = availableNumbers.filter(n => n !== number);
             updateStats();
             checkWinForViewer();
-            
             speakCantonese(number, phrase);
         }
         
@@ -2318,7 +2772,6 @@
             6: '六六大順！',
             66: '順順利利！',
             9: '長長久久！',
-            99: '天長地久！',
             3: '生生猛猛！',
             7: '起呀！',
             13: '實升！好彩嘅！',
@@ -2868,6 +3321,84 @@
             if (hostMusicAudio) {
                 hostMusicAudio.pause();
                 hostMusicAudio.currentTime = 0;
+            }
+        }
+
+        // ==========================================
+        // SPECTATOR (VIEW) MODE FUNCTIONS
+        // ==========================================
+
+        function generateSpectatorNumberBoard() {
+            const board = document.getElementById('spectatorNumberBoard');
+            if (!board) return;
+            board.innerHTML = '';
+            for (let i = 1; i <= 75; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'number-ball';
+                ball.textContent = i;
+                ball.id = `sball-${i}`;
+                board.appendChild(ball);
+            }
+        }
+
+        function updateSpectatorStats() {
+            const drawnEl = document.getElementById('spectatorDrawn');
+            const leftEl  = document.getElementById('spectatorLeft');
+            if (drawnEl) drawnEl.textContent = calledNumbers.length;
+            if (leftEl)  leftEl.textContent  = 75 - calledNumbers.length;
+        }
+
+        function updateSpectatorDisplay(number, phrase) {
+            const ball   = document.getElementById('spectatorBall');
+            const numEl  = document.getElementById('spectatorNumber');
+            const phraseEl = document.getElementById('spectatorPhrase');
+            if (!ball || !numEl) return;
+
+            // Reset animation by removing class, forcing reflow, re-adding
+            ball.classList.remove('bounce-in', 'idle');
+            void ball.offsetWidth;
+            numEl.textContent = number;
+            ball.classList.add('bounce-in');
+
+            // Animate phrase
+            if (phraseEl) {
+                phraseEl.classList.remove('glow-in');
+                void phraseEl.offsetWidth;
+                phraseEl.textContent = phrase;
+                phraseEl.classList.add('glow-in');
+            }
+
+            // Sparkle burst
+            createSpectatorSparkles();
+        }
+
+        function createSpectatorSparkles() {
+            const wrap = document.getElementById('spectatorBallWrap');
+            if (!wrap) return;
+            const colors = ['#f093fb', '#f5576c', '#667eea', '#ffd700', '#fff', '#38ef7d', '#fcb69f'];
+            const cx = 150, cy = 150; // center of 300px wrap
+
+            for (let i = 0; i < 16; i++) {
+                setTimeout(() => {
+                    const p = document.createElement('div');
+                    p.className = 'sparkle-particle';
+                    const angle = (Math.random() * 360) * Math.PI / 180;
+                    const dist  = 90 + Math.random() * 140;
+                    const tx = (Math.cos(angle) * dist).toFixed(1) + 'px';
+                    const ty = (Math.sin(angle) * dist).toFixed(1) + 'px';
+                    const size = (4 + Math.random() * 9).toFixed(1);
+                    const delay = (Math.random() * 0.25).toFixed(2);
+                    p.style.cssText = `
+                        left:${cx}px; top:${cy}px;
+                        width:${size}px; height:${size}px;
+                        background:${colors[Math.floor(Math.random() * colors.length)]};
+                        --tx:${tx}; --ty:${ty};
+                        animation-delay:${delay}s;
+                        box-shadow: 0 0 6px currentColor;
+                    `;
+                    wrap.appendChild(p);
+                    setTimeout(() => p.remove(), 1400);
+                }, i * 25);
             }
         }
 

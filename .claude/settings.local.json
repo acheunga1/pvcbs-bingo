@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls *.html)",
+      "Bash(start \"\" \"c:\\\\Users\\\\acheu\\\\OneDrive\\\\文件\\\\Bingo-Game\\\\bingo_game_multiplayer.html\")"
+    ]
+  }
+}
